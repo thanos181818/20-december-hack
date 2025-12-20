@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -38,6 +38,7 @@ const ProductForm = () => {
   const { products, addProduct, updateProduct } = useAdminData();
   const isEditing = !!id;
   const existingProduct = isEditing ? products.find(p => p.id === id) : null;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [status, setStatus] = useState<ProductStatus>(existingProduct?.status || 'new');
   const [formData, setFormData] = useState({
@@ -106,6 +107,7 @@ const ProductForm = () => {
         ...formData,
         status,
         images,
+        price: formData.salesPrice, // FIXED: Added missing price property
       });
       toast.success('Product updated successfully');
     } else {
@@ -113,6 +115,7 @@ const ProductForm = () => {
         ...formData,
         status,
         images,
+        price: formData.salesPrice, // FIXED: Added missing price property
       });
       toast.success('Product created successfully');
     }
@@ -126,6 +129,27 @@ const ProductForm = () => {
         ? prev.colors.filter(c => c !== color)
         : [...prev.colors, color],
     }));
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files);
+      
+      // Convert files to Base64 for preview and storage
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            setImages(prev => [...prev, reader.result as string]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -369,12 +393,31 @@ const ProductForm = () => {
                 <CardTitle>Product Images</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                <div 
+                  className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={triggerFileInput}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    multiple
+                    accept="image/*"
+                  />
                   <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
                   <p className="text-sm text-muted-foreground mb-2">
                     Drag and drop images here, or click to browse
                   </p>
-                  <Button type="button" variant="outline" size="sm">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      triggerFileInput();
+                    }}
+                  >
                     Choose Files
                   </Button>
                 </div>

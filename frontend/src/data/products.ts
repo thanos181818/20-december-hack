@@ -20,6 +20,8 @@ export interface Product {
   published: boolean;
 }
 
+const PLACEHOLDER_IMG = 'https://placehold.co/600x800/e2e8f0/1e293b?text=Product+Image';
+
 export const products: Product[] = [
   {
     id: '1',
