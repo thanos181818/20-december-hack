@@ -118,6 +118,9 @@ const VirtualTryOn = () => {
     });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
+    // push the floor slightly down so shoes/feet remain visible
+    const floorOffset = -0.12 * (bodyMetrics.height / 170);
+    floor.position.y = floorOffset;
     floor.receiveShadow = true;
     scene.add(floor);
 
