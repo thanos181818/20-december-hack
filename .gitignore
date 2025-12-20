@@ -29,4 +29,9 @@ frontend/*.sln
 frontend/*.sw?
 
 
+# 3D Virtual Try-On (standalone demo - integrated into main frontend)
+3d-virtual-tryon/node_modules
+3d-virtual-tryon/dist
+3d-virtual-tryon/*.local
+
 backend/.env

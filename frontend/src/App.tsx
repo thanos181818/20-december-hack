@@ -21,6 +21,7 @@ import Dashboard from "./pages/Dashboard";
 import OrderDetail from "./pages/OrderDetail";
 import InvoiceView from "./pages/InvoiceView";
 import Sales from "./pages/Sales";
+import VirtualTryOn from "./pages/VirtualTryOn";
 import NotFound from "./pages/NotFound";
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -53,6 +54,7 @@ const App = () => (
               <Routes>
                 {/* Customer Portal Routes */}
                 <Route path="/" element={<Index />} />
+                <Route path="/virtual-try-on" element={<VirtualTryOn />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />

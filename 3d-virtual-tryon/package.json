@@ -1,0 +1,22 @@
+{
+  "name": "atelier-virtual-tryout",
+  "version": "1.0.0",
+  "description": "Premium 3D virtual clothing try-on system",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^7.3.0"
+  }
+}

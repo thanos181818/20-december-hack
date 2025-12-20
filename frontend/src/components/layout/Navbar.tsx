@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X, Shield } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Shield, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -46,6 +47,16 @@ const Navbar = () => {
               className="text-foreground/80 hover:text-primary transition-colors font-medium"
             >
               Children
+            </Link>
+            <Link
+              to="/virtual-try-on"
+              className="text-foreground/80 hover:text-primary transition-colors font-medium flex items-center gap-1"
+            >
+              Try-On
+              <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-[10px] px-1.5 py-0">
+                <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                Beta
+              </Badge>
             </Link>
           </div>
 
@@ -135,6 +146,17 @@ const Navbar = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Children
+              </Link>
+              <Link
+                to="/virtual-try-on"
+                className="px-4 py-3 text-foreground/80 hover:bg-muted rounded-md transition-colors flex items-center gap-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Virtual Try-On
+                <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-[10px] px-1.5 py-0">
+                  <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                  Beta
+                </Badge>
               </Link>
               <div className="border-t border-border my-2" />
               {isAuthenticated ? (
