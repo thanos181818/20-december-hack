@@ -1,3 +1,5 @@
+# backend/orders.py
+
 from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +16,6 @@ from auth import get_current_user
 from websocket_manager import manager
 
 # --- Pydantic Schemas (Data Validation) ---
-# These define what JSON the Frontend sends to us
 class OrderItemSchema(BaseModel):
     product_id: int
     quantity: int
@@ -42,14 +43,12 @@ async def place_order(
     5. Broadcast WebSocket update
     """
     total_amount = 0.0
-    affected_products = [] # List to track what changed for WebSockets
+    affected_products = [] 
 
     try:
         # --- 1. Create Order Header ---
-        # Generate a simple order number
         order_num = f"SO-{int(datetime.utcnow().timestamp())}"
         
-        # Link to the user's Contact ID (Assuming User is linked to a Contact)
         if not current_user.contact_id:
              raise HTTPException(status_code=400, detail="User has no linked Contact profile")
 
@@ -60,25 +59,20 @@ async def place_order(
             status="confirmed"
         )
         session.add(new_order)
-        await session.flush() # Flush to generate the new_order.id
+        await session.flush()
 
         # --- 2. Process Items & Deduct Stock ---
         for item in order_data.items:
-            # Fetch Product
             product = await session.get(Product, item.product_id)
             if not product:
                 raise HTTPException(status_code=404, detail=f"Product ID {item.product_id} not found")
             
-            # Check Stock
             if product.current_stock < item.quantity:
                 raise HTTPException(status_code=400, detail=f"Insufficient stock for '{product.name}'. Available: {product.current_stock}")
 
-            # DEDUCT STOCK
-            # SQLAlchemy handles the version_id check automatically upon commit
             product.current_stock -= item.quantity
             session.add(product) 
             
-            # Create Line Item
             line = SaleOrderLine(
                 order_id=new_order.id,
                 product_id=product.id,
@@ -87,16 +81,13 @@ async def place_order(
             )
             session.add(line)
             
-            # Calculate totals
             total_amount += (product.price * item.quantity)
             
-            # Record change for WebSocket broadcast
             affected_products.append({
                 "id": product.id, 
                 "new_stock": product.current_stock
             })
 
-        # Update Order Total
         new_order.total_amount = total_amount
         session.add(new_order)
 
@@ -110,9 +101,6 @@ async def place_order(
             )
             session.add(invoice)
 
-        # --- 4. COMMIT TRANSACTION ---
-        # This is where the database actually saves. 
-        # If version_id mismatch (concurrency issue), it throws StaleDataError.
         await session.commit() 
         await session.refresh(new_order)
 
@@ -121,11 +109,8 @@ async def place_order(
         raise HTTPException(status_code=409, detail="Stock changed while processing. Please retry.")
     except Exception as e:
         await session.rollback()
-        # In production, log the actual error 'e' to console/file
         raise HTTPException(status_code=500, detail=str(e))
 
-    # --- 5. BROADCAST TO ADMIN (Post-Commit) ---
-    # We do this AFTER commit to ensure the DB is definitely updated
     for prod in affected_products:
         await manager.broadcast_stock_update(prod["id"], prod["new_stock"])
 
@@ -138,5 +123,6 @@ async def place_order(
 
 @router.get("/products")
 async def get_products(session: AsyncSession = Depends(get_session)):
-    result = await session.exec(select(Product))
-    return result.all()
+    # --- FIX: Use session.execute and scalars().all() ---
+    result = await session.execute(select(Product))
+    return result.scalars().all()

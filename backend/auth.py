@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -6,11 +7,16 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from db import get_session # Assuming you have a db.py for engine
+from db import get_session
 from models import User, Contact, UserRole, ContactType
+from dotenv import load_dotenv
 
-# Config
-SECRET_KEY = "YOUR_SUPER_SECRET_KEY"
+# --- FIX: Load SECRET_KEY from environment variables ---
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("❌ SECRET_KEY is missing! Check your backend/.env file.")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -35,8 +41,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
         raise HTTPException(status_code=401, detail="Invalid token")
     
     statement = select(User).where(User.email == email)
-    result = await session.exec(statement)
-    user = result.first()
+    # --- FIX: Use session.execute and scalars().first() ---
+    result = await session.execute(statement)
+    user = result.scalars().first()
     if user is None: raise HTTPException(status_code=401, detail="User not found")
     return user
 
@@ -46,17 +53,23 @@ async def register(
     email: str, 
     password: str, 
     name: str, 
+    # --- FIX 1: Add a 'role' parameter, defaulting to CUSTOMER ---
+    role: UserRole = UserRole.CUSTOMER,
     session: AsyncSession = Depends(get_session)
 ):
     # 1. Check if user exists
-    existing_user = await session.exec(select(User).where(User.email == email))
-    if existing_user.first():
+    # --- FIX: Use session.execute and scalars().first() ---
+    result = await session.execute(select(User).where(User.email == email))
+    existing_user = result.scalars().first()
+    if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     # 2. Atomic Transaction: Create Contact -> Create User
     try:
         # Create Contact entry first
-        new_contact = Contact(name=name, email=email, contact_type=ContactType.CUSTOMER)
+        # --- FIX 2: Create a generic contact, not hardcoded to customer ---
+        contact_type = ContactType.CUSTOMER if role == UserRole.CUSTOMER else ContactType.BOTH
+        new_contact = Contact(name=name, email=email, contact_type=contact_type)
         session.add(new_contact)
         await session.flush() # Flush to get the ID for the foreign key
         
@@ -65,13 +78,15 @@ async def register(
         new_user = User(
             email=email, 
             hashed_password=hashed_pw, 
-            role=UserRole.CUSTOMER, 
+            # --- FIX 3: Use the 'role' variable provided in the request ---
+            role=role, 
             contact_id=new_contact.id
         )
         session.add(new_user)
         await session.commit()
         await session.refresh(new_user)
-        return {"status": "success", "user_id": new_user.id, "role": "customer"}
+        # --- FIX 4: Return the actual role that was created ---
+        return {"status": "success", "user_id": new_user.id, "role": role.value}
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e))
@@ -80,11 +95,12 @@ async def register(
 @router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_session)):
     statement = select(User).where(User.email == form_data.username)
-    result = await session.exec(statement)
-    user = result.first()
+    # --- FIX: Use session.execute and scalars().first() ---
+    result = await session.execute(statement)
+    user = result.scalars().first()
     
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
-    access_token = create_access_token(data={"sub": user.email, "role": user.role})
-    return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+    access_token = create_access_token(data={"sub": user.email, "role": user.role.value})
+    return {"access_token": access_token, "token_type": "bearer", "role": user.role.value}

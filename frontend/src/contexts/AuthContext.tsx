@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Validate role if specific role was requested
       if (role && serverRole !== role) {
-        toast.error(`Invalid role. This account is for ${serverRole}s.`);
+        toast.error(`Invalid role. This account is for a ${serverRole}.`);
         return false;
       }
       
@@ -71,7 +71,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch (error) {
       console.error("Login failed", error);
-      toast.error("Invalid email or password");
+      // FIX: Use Type Guard to provide better error messages
+      if (axios.isAxiosError(error) && error.response?.data?.detail) {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error("Invalid email or password");
+      }
       return false;
     }
   }, []);
@@ -83,7 +88,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         params: { 
           email, 
           password, 
-          name 
+          name,
+          role
         } 
       });
       
@@ -93,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       let msg = "Registration failed. Try again.";
       
-      // FIX: Use Type Guard instead of 'any'
       if (axios.isAxiosError(error) && error.response?.data?.detail) {
         msg = error.response.data.detail;
       }
