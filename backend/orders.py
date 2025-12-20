@@ -10,7 +10,7 @@ from sqlmodel import select
 
 # Internal imports
 from backend.db import get_session
-from backend.models import Product, SaleOrder, SaleOrderLine, Invoice, User
+from backend.models import Product, SaleOrder, SaleOrderLine, Invoice, InvoiceLine, User
 from backend.auth import get_current_user
 from backend.websocket_manager import manager
 
@@ -93,6 +93,7 @@ async def place_order(
         session.add(new_order)
 
         # --- 3. Auto Invoice Logic ---
+        invoice = None
         if order_data.auto_invoice:
             from datetime import date
             invoice = Invoice(
@@ -102,10 +103,25 @@ async def place_order(
                 invoice_date=date.today(),
                 total_amount=total_amount,
                 tax_amount=0,
-                amount_paid=0,
-                status="draft"
+                amount_paid=total_amount,  # Mark as paid since user already paid during checkout
+                status="paid"  # Set status to paid
             )
             session.add(invoice)
+            await session.flush()  # Flush to get invoice.id
+            
+            # Create invoice lines from order items
+            for item in order_data.items:
+                product = await session.get(Product, item.product_id)
+                if product:
+                    invoice_line = InvoiceLine(
+                        invoice_id=invoice.id,
+                        product_id=product.id,
+                        description=product.name,
+                        quantity=item.quantity,
+                        unit_price=product.price,
+                        tax_rate=0.0
+                    )
+                    session.add(invoice_line)
 
         await session.commit() 
         await session.refresh(new_order)

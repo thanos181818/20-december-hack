@@ -20,7 +20,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useAdminData } from '@/contexts/AdminDataContext';
+import { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
 interface AdminLayoutProps {
@@ -40,7 +41,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { refreshData } = useAdminData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const hasRefreshed = useRef(false);
+
+  // Refresh data when admin panel loads (handles login/logout cycles)
+  useEffect(() => {
+    if (!hasRefreshed.current) {
+      hasRefreshed.current = true;
+      refreshData();
+    }
+  }, [refreshData]);
 
   const handleLogout = () => {
     logout();

@@ -248,6 +248,8 @@ interface AdminDataContextType {
   
   autoInvoicing: boolean;
   setAutoInvoicing: (value: boolean) => void;
+  
+  refreshData: () => Promise<void>;
 }
 
 const AdminDataContext = createContext<AdminDataContextType | undefined>(undefined);
@@ -428,8 +430,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   // Fetch all data from backend
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = useCallback(async () => {
       try {
         setLoading(true);
         
@@ -540,10 +541,12 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } finally {
         setLoading(false);
       }
-    };
+  }, [mapSalesOrder, mapInvoiceFromBackend, getContactName, getProductName]);
     
+  // Initial data fetch on mount
+  useEffect(() => {
     fetchData();
-  }, [mapSalesOrder, mapInvoiceFromBackend]);
+  }, [fetchData]);
 
   // --- 2. WEBSOCKET REAL-TIME SYNC ---
   useEffect(() => {
@@ -999,6 +1002,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         offers, addOffer, updateOffer, deleteOffer,
         coupons, addCoupon, updateCoupon,
         autoInvoicing, setAutoInvoicing,
+        refreshData: fetchData,
       }}
     >
       {children}
