@@ -353,6 +353,32 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
   }, [getContactName, getProductName]);
 
+  const mapVendorBillFromBackend = useCallback((bill: BackendVendorBill): VendorBill => {
+    return {
+      id: bill.id.toString(),
+      billNumber: bill.bill_number,
+      vendor: getContactName(bill.vendor_id, bill.vendor?.name),
+      vendorId: bill.vendor_id.toString(),
+      purchaseOrderId: bill.purchase_order_id?.toString(),
+      billDate: bill.bill_date,
+      dueDate: bill.due_date || bill.bill_date,
+      lineItems: bill.lines?.map(line => ({
+        id: line.id?.toString() || '',
+        productId: line.product_id.toString(),
+        productName: line.description || getProductName(line.product_id),
+        quantity: line.quantity,
+        unitPrice: line.unit_price,
+        tax: line.tax_rate,
+        total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
+      })) || [],
+      subtotal: bill.total_amount - bill.tax_amount,
+      tax: bill.tax_amount,
+      total: bill.total_amount,
+      paid: bill.amount_paid,
+      status: bill.status === 'paid' ? 'paid' : bill.amount_paid > 0 ? 'partial' : bill.status as InvoiceStatus,
+    };
+  }, [getContactName, getProductName]);
+
   // Persist local-only collections so admin changes survive reloads
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.users, users);
@@ -485,29 +511,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         })));
         
         // Map vendor bills
-        setVendorBills(vendorBillsRes.data.map((bill): VendorBill => ({
-          id: bill.id.toString(),
-          billNumber: bill.bill_number,
-          vendor: getContactName(bill.vendor_id, bill.vendor?.name),
-          vendorId: bill.vendor_id.toString(),
-          purchaseOrderId: bill.purchase_order_id?.toString(),
-          billDate: bill.bill_date,
-          dueDate: bill.due_date || bill.bill_date,
-          lineItems: bill.lines?.map(line => ({
-            id: line.id?.toString() || '',
-            productId: line.product_id.toString(),
-            productName: line.description || getProductName(line.product_id),
-            quantity: line.quantity,
-            unitPrice: line.unit_price,
-            tax: line.tax_rate,
-            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
-          })) || [],
-          subtotal: bill.total_amount - bill.tax_amount,
-          tax: bill.tax_amount,
-          total: bill.total_amount,
-          paid: bill.amount_paid,
-          status: bill.status === 'paid' ? 'paid' : bill.amount_paid > 0 ? 'partial' : bill.status as InvoiceStatus,
-        })));
+        setVendorBills(vendorBillsRes.data.map(mapVendorBillFromBackend));
         
         toast.success('Data loaded from backend successfully');
       } catch (error: any) {
@@ -761,7 +765,10 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         status: i.status as any,
         amount_paid: i.paid,
       });
-      setInvoices(p => p.map(x => x.id === id ? {...x, ...i} : x));
+      // Re-fetch the updated invoice from backend to ensure data consistency
+      const invoiceRes = await invoicesApi.getById(parseInt(id));
+      const updatedInvoice = mapInvoiceFromBackend(invoiceRes.data);
+      setInvoices(p => p.map(x => x.id === id ? updatedInvoice : x));
       toast.success('Invoice updated successfully');
     } catch (error: any) {
       toast.error('Failed to update invoice: ' + (error.response?.data?.detail || error.message));
@@ -872,7 +879,10 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         status: b.status as any,
         amount_paid: b.paid,
       });
-      setVendorBills(p => p.map(i => i.id === id ? {...i, ...b} : i));
+      // Re-fetch the updated vendor bill from backend to ensure data consistency
+      const billRes = await vendorBillsApi.getById(parseInt(id));
+      const updatedBill = mapVendorBillFromBackend(billRes.data);
+      setVendorBills(p => p.map(i => i.id === id ? updatedBill : i));
       toast.success('Vendor bill updated successfully');
     } catch (error: any) {
       toast.error('Failed to update vendor bill: ' + (error.response?.data?.detail || error.message));

@@ -34,4 +34,6 @@ frontend/*.sw?
 3d-virtual-tryon/dist
 3d-virtual-tryon/*.local
 
+# Sensitive config files
 backend/.env
+admins.json

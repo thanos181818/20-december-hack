@@ -65,7 +65,8 @@ const BillPayment = () => {
     }
 
     const newPaid = bill.paid + formData.amount;
-    const newStatus = newPaid >= bill.total ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
+    // Map to backend InvoiceStatus: 'paid', 'partial', or 'confirmed' (no payment yet)
+    const newStatus = newPaid >= bill.total ? 'paid' : newPaid > 0 ? 'partial' : 'confirmed';
     
     updateVendorBill(bill.id, {
       paid: newPaid,

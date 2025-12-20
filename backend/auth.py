@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -25,6 +26,29 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# --- Load Admin Credentials from JSON file ---
+def load_admin_credentials():
+    """Load admin credentials from admins.json file."""
+    admin_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "admins.json")
+    try:
+        with open(admin_file_path, "r") as f:
+            data = json.load(f)
+            return data.get("admins", [])
+    except FileNotFoundError:
+        print("⚠️ admins.json not found. No admins configured.")
+        return []
+    except json.JSONDecodeError:
+        print("⚠️ admins.json is invalid JSON.")
+        return []
+
+def verify_admin_credentials(email: str, password: str):
+    """Verify if email/password matches an admin in admins.json."""
+    admins = load_admin_credentials()
+    for admin in admins:
+        if admin.get("email") == email and admin.get("password") == password:
+            return admin
+    return None
+
 # --- Helpers ---
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -48,15 +72,21 @@ async def get_current_user(token: str = Depends(oauth2_scheme), session: AsyncSe
     return user
 
 # --- Registration Endpoint (Transactional) ---
+# NOTE: Admins cannot register via this endpoint - they must be configured in admins.json
 @router.post("/register", status_code=201)
 async def register(
     email: str, 
     password: str, 
     name: str, 
-    # --- FIX 1: Add a 'role' parameter, defaulting to CUSTOMER ---
     role: UserRole = UserRole.CUSTOMER,
     session: AsyncSession = Depends(get_session)
 ):
+    # Block admin registration - admins must be configured in admins.json
+    if role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403, 
+            detail="Admin accounts cannot be created via signup. Contact system administrator."
+        )
     # 1. Check if user exists
     # --- FIX: Use session.execute and scalars().first() ---
     result = await session.execute(select(User).where(User.email == email))
@@ -104,6 +134,54 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Async
     
     access_token = create_access_token(data={"sub": user.email, "role": user.role.value})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role.value}
+
+
+# --- Admin Login Endpoint (validates against admins.json) ---
+@router.post("/admin/login")
+async def admin_login(form_data: OAuth2PasswordRequestForm = Depends(), session: AsyncSession = Depends(get_session)):
+    """Admin login - validates credentials against admins.json file."""
+    # Verify against admins.json
+    admin = verify_admin_credentials(form_data.username, form_data.password)
+    if not admin:
+        raise HTTPException(status_code=400, detail="Invalid admin credentials")
+    
+    # Check if admin user exists in database, if not create it
+    result = await session.execute(select(User).where(User.email == form_data.username))
+    user = result.scalars().first()
+    
+    if not user:
+        # Create the admin user and contact in database
+        try:
+            new_contact = Contact(
+                name=admin.get("name", "Admin"),
+                email=form_data.username,
+                contact_type=ContactType.BOTH
+            )
+            session.add(new_contact)
+            await session.flush()
+            
+            hashed_pw = pwd_context.hash(form_data.password)
+            user = User(
+                email=form_data.username,
+                hashed_password=hashed_pw,
+                role=UserRole.ADMIN,
+                contact_id=new_contact.id
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=f"Error creating admin user: {str(e)}")
+    else:
+        # Update password hash if it changed in admins.json
+        if not pwd_context.verify(form_data.password, user.hashed_password):
+            user.hashed_password = pwd_context.hash(form_data.password)
+            session.add(user)
+            await session.commit()
+    
+    access_token = create_access_token(data={"sub": user.email, "role": UserRole.ADMIN.value})
+    return {"access_token": access_token, "token_type": "bearer", "role": UserRole.ADMIN.value}
 
 
 # --- Profile Endpoints ---

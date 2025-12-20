@@ -1,25 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Mail, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const { login, signup, isAuthenticated, isAdmin } = useAuth();
-  const [isLogin, setIsLogin] = useState(true);
+  const { login, isAuthenticated, isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
     password: '',
-    confirmPassword: '',
   });
 
   useEffect(() => {
@@ -43,31 +39,14 @@ const AdminLogin = () => {
       return;
     }
 
-    if (!isLogin && formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (!isLogin && !formData.name) {
-      toast.error('Please enter your full name');
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      let success: boolean;
-      if (isLogin) {
-        success = await login(formData.email, formData.password, 'admin');
-      } else {
-        success = await signup(formData.name, formData.email, formData.password, 'admin');
-      }
+      const success = await login(formData.email, formData.password, 'admin');
 
       if (success) {
-        toast.success(isLogin ? 'Welcome back!' : 'Account created successfully!');
+        toast.success('Welcome back!');
         navigate('/admin');
       } else {
-        toast.error('Authentication failed. Please try again.');
+        toast.error('Invalid admin credentials. Please try again.');
       }
     } catch {
       toast.error('An error occurred. Please try again.');
@@ -79,7 +58,7 @@ const AdminLogin = () => {
   return (
     <>
       <Helmet>
-        <title>{isLogin ? 'Admin Login' : 'Admin Signup'} | ApparelDesk</title>
+        <title>Admin Login | ApparelDesk</title>
       </Helmet>
       <div className="min-h-screen flex">
         {/* Left Panel - Form */}
@@ -91,33 +70,13 @@ const AdminLogin = () => {
             </Link>
 
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              {isLogin ? 'Admin Login' : 'Create Admin Account'}
+              Admin Login
             </h1>
             <p className="text-muted-foreground mb-8">
-              {isLogin
-                ? 'Access the admin dashboard to manage your store'
-                : 'Fill in your details to create an admin account'}
+              Access the admin dashboard to manage your store
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <div className="relative mt-1">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      className="pl-10"
-                      value={formData.name}
-                      onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      required={!isLogin}
-                    />
-                  </div>
-                </div>
-              )}
-
               <div>
                 <Label htmlFor="email">Email</Label>
                 <div className="relative mt-1">
@@ -150,24 +109,6 @@ const AdminLogin = () => {
                 </div>
               </div>
 
-              {!isLogin && (
-                <div>
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <div className="relative mt-1">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      className="pl-10"
-                      value={formData.confirmPassword}
-                      onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      required={!isLogin}
-                    />
-                  </div>
-                </div>
-              )}
-
               <Button
                 type="submit"
                 variant="hero"
@@ -175,30 +116,21 @@ const AdminLogin = () => {
                 className="w-full gap-2"
                 disabled={isLoading}
               >
-                {isLoading ? 'Please wait...' : isLogin ? 'Sign In' : 'Create Account'}
+                {isLoading ? 'Please wait...' : 'Sign In'}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </form>
 
-            <p className="mt-6 text-center text-muted-foreground">
-              {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-primary font-medium hover:underline"
-              >
-                {isLogin ? 'Sign up' : 'Sign in'}
-              </button>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Are you a customer?{' '}
+              <Link to="/login" className="text-primary font-medium hover:underline">
+                Customer Login
+              </Link>
             </p>
 
-            {isLogin && (
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                Are you a customer?{' '}
-                <Link to="/login" className="text-primary font-medium hover:underline">
-                  Customer Login
-                </Link>
-              </p>
-            )}
+            <p className="mt-4 text-center text-xs text-muted-foreground">
+              Admin accounts are managed by the system administrator.
+            </p>
           </div>
         </div>
 

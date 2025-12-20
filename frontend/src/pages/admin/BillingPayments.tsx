@@ -82,8 +82,14 @@ const BillingPayments = () => {
     order.status === 'confirmed' && !invoices.some(inv => inv.salesOrderId === order.id)
   ).length;
 
+  // Invoice status counts
+  const draftInvoices = invoices.filter(inv => inv.status === 'draft').length;
+  const confirmedInvoices = invoices.filter(inv => inv.status === 'confirmed').length;
+  const partialInvoices = invoices.filter(inv => inv.status === 'partial').length;
+  const paidInvoices = invoices.filter(inv => inv.status === 'paid').length;
+  const cancelledInvoices = invoices.filter(inv => inv.status === 'cancelled').length;
   const unpaidInvoices = invoices.filter(inv => 
-    inv.status === 'unpaid' || inv.status === 'partial'
+    inv.status === 'confirmed' || inv.status === 'partial'
   ).length;
 
   const overdueInvoices = invoices.filter(inv => {
@@ -101,8 +107,14 @@ const BillingPayments = () => {
     po.status === 'confirmed' && !vendorBills.some(bill => bill.purchaseOrderId === po.id)
   ).length;
 
+  // Vendor bill status counts
+  const draftBills = vendorBills.filter(bill => bill.status === 'draft').length;
+  const confirmedBills = vendorBills.filter(bill => bill.status === 'confirmed').length;
+  const partialBills = vendorBills.filter(bill => bill.status === 'partial').length;
+  const paidBills = vendorBills.filter(bill => bill.status === 'paid').length;
+  const cancelledBills = vendorBills.filter(bill => bill.status === 'cancelled').length;
   const unpaidBills = vendorBills.filter(bill => 
-    bill.status === 'unpaid' || bill.status === 'partial'
+    bill.status === 'confirmed' || bill.status === 'partial'
   ).length;
 
   const overdueBills = vendorBills.filter(bill => {
@@ -192,7 +204,10 @@ const BillingPayments = () => {
                       <div className="text-left">
                         <div className="font-medium">Customer Invoices</div>
                         <div className="text-xs text-muted-foreground">
-                          {unpaidInvoices} unpaid • {overdueInvoices} overdue
+                          <span className="text-gray-500">{draftInvoices} draft</span> • <span className="text-blue-600">{confirmedInvoices} confirmed</span> • <span className="text-orange-500">{partialInvoices} partial</span> • <span className="text-green-600">{paidInvoices} paid</span> • <span className="text-red-500">{cancelledInvoices} cancelled</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {overdueInvoices} overdue
                         </div>
                       </div>
                     </div>
@@ -238,7 +253,10 @@ const BillingPayments = () => {
                       <div className="text-left">
                         <div className="font-medium">Vendor Bills</div>
                         <div className="text-xs text-muted-foreground">
-                          {unpaidBills} unpaid • {overdueBills} overdue
+                          <span className="text-gray-500">{draftBills} draft</span> • <span className="text-blue-600">{confirmedBills} confirmed</span> • <span className="text-orange-500">{partialBills} partial</span> • <span className="text-green-600">{paidBills} paid</span> • <span className="text-red-500">{cancelledBills} cancelled</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {overdueBills} overdue
                         </div>
                       </div>
                     </div>

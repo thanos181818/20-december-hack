@@ -21,6 +21,7 @@ class OrderStatus(str, Enum):
 class InvoiceStatus(str, Enum):
     DRAFT = "draft"
     CONFIRMED = "confirmed"
+    PARTIAL = "partial"
     PAID = "paid"
     CANCELLED = "cancelled"
 

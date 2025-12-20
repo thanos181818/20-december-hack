@@ -68,7 +68,7 @@ export interface Invoice {
   total_amount: number;
   tax_amount: number;
   amount_paid: number;
-  status: 'draft' | 'confirmed' | 'paid' | 'cancelled';
+  status: 'draft' | 'confirmed' | 'partial' | 'paid' | 'cancelled';
   notes?: string;
   created_at: string;
   customer?: Contact;
@@ -117,7 +117,7 @@ export interface VendorBill {
   total_amount: number;
   tax_amount: number;
   amount_paid: number;
-  status: 'draft' | 'confirmed' | 'paid' | 'cancelled';
+  status: 'draft' | 'confirmed' | 'partial' | 'paid' | 'cancelled';
   notes?: string;
   created_at: string;
   vendor?: Contact;
@@ -220,7 +220,7 @@ export const invoicesApi = {
     notes?: string;
   }) => api.post<Invoice>('/admin/invoices', data),
   update: (id: number, data: {
-    status?: 'draft' | 'confirmed' | 'paid' | 'cancelled';
+    status?: 'draft' | 'confirmed' | 'partial' | 'paid' | 'cancelled';
     amount_paid?: number;
     notes?: string;
   }) => api.put<Invoice>(`/admin/invoices/${id}`, data),
@@ -274,7 +274,7 @@ export const vendorBillsApi = {
     notes?: string;
   }) => api.post<VendorBill>('/admin/vendor-bills', data),
   update: (id: number, data: {
-    status?: 'draft' | 'confirmed' | 'paid' | 'cancelled';
+    status?: 'draft' | 'confirmed' | 'partial' | 'paid' | 'cancelled';
     amount_paid?: number;
     notes?: string;
   }) => api.put<VendorBill>(`/admin/vendor-bills/${id}`, data),

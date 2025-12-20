@@ -42,7 +42,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       formData.append('username', email);
       formData.append('password', password);
 
-      const response = await api.post('/auth/login', formData, {
+      // Use different endpoint for admin login (validates against admins.json)
+      const endpoint = role === 'admin' ? '/auth/admin/login' : '/auth/login';
+      
+      const response = await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
 

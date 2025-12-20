@@ -71,7 +71,8 @@ const InvoicePayment = () => {
     }
 
     const newPaid = invoice.paid + formData.amount;
-    const newStatus = newPaid >= invoice.total ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
+    // Map to backend InvoiceStatus: 'paid', 'partial', or 'confirmed' (no payment yet)
+    const newStatus = newPaid >= invoice.total ? 'paid' : newPaid > 0 ? 'partial' : 'confirmed';
     
     try {
       await updateInvoice(invoice.id, {
@@ -80,6 +81,7 @@ const InvoicePayment = () => {
         paidDate: newPaid >= invoice.total ? formData.date : undefined,
       });
       setStatus('confirmed');
+      toast.success('Payment recorded successfully');
     } catch (error) {
       console.error('Error updating invoice:', error);
     }
