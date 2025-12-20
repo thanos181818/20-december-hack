@@ -1,9 +1,10 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from db import init_db
-from auth import router as auth_router
-from orders import router as orders_router
-from websocket_manager import manager
+from backend.db import init_db
+from backend.auth import router as auth_router
+from backend.orders import router as orders_router
+from backend.admin_api import router as admin_router
+from backend.websocket_manager import manager
 
 app = FastAPI(title="ApparelDesk API")
 
@@ -12,6 +13,8 @@ app = FastAPI(title="ApparelDesk API")
 origins = [
     "http://localhost:8080",  # Your Vite frontend
     "http://127.0.0.1:8080",
+    "http://localhost:5173",  # Vite default
+    "http://127.0.0.1:5173",
 ]
 
 app.add_middleware(
@@ -29,6 +32,7 @@ async def on_startup():
 
 app.include_router(auth_router)
 app.include_router(orders_router)
+app.include_router(admin_router)
 
 # --- WebSocket Endpoint for Admin ---
 @app.websocket("/ws/admin")

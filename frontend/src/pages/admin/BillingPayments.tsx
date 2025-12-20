@@ -315,24 +315,27 @@ const BillingPayments = () => {
                               Edit
                             </DropdownMenuItem>
                             {order.status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => {
+                              <DropdownMenuItem onClick={async () => {
                                 // Create invoice from sales order
-                                const invoiceId = addInvoice({
-                                  customer: order.customer,
-                                  customerId: order.customerId,
-                                  salesOrderId: order.id,
-                                  paymentTerm: order.paymentTerm,
-                                  invoiceDate: new Date().toISOString().split('T')[0],
-                                  dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                                  lineItems: order.lineItems,
-                                  subtotal: order.subtotal,
-                                  tax: order.tax,
-                                  total: order.total,
-                                  paid: 0,
-                                  status: 'confirmed',
-                                });
-                                toast.success('Invoice created successfully');
-                                navigate(`/admin/billing`);
+                                try {
+                                  await addInvoice({
+                                    customer: order.customer,
+                                    customerId: order.customerId,
+                                    salesOrderId: order.id,
+                                    paymentTerm: order.paymentTerm,
+                                    invoiceDate: new Date().toISOString().split('T')[0],
+                                    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                                    lineItems: order.lineItems,
+                                    subtotal: order.subtotal,
+                                    tax: order.tax,
+                                    total: order.total,
+                                    paid: 0,
+                                    status: 'confirmed',
+                                  });
+                                  navigate(`/admin/billing`);
+                                } catch (error) {
+                                  console.error('Error creating invoice:', error);
+                                }
                               }}>
                                 <FileText className="h-4 w-4 mr-2" />
                                 Create Invoice
@@ -352,9 +355,12 @@ const BillingPayments = () => {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {order.status === 'draft' && (
-                              <DropdownMenuItem onClick={() => {
-                                updateSalesOrder(order.id, { status: 'confirmed' });
-                                toast.success('Sales order confirmed');
+                              <DropdownMenuItem onClick={async () => {
+                                try {
+                                  await updateSalesOrder(order.id, { status: 'confirmed' });
+                                } catch (error) {
+                                  console.error('Error confirming order:', error);
+                                }
                               }}>
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Confirm
@@ -363,9 +369,12 @@ const BillingPayments = () => {
                             {order.status !== 'cancelled' && (
                               <DropdownMenuItem 
                                 className="text-destructive"
-                                onClick={() => {
-                                  updateSalesOrder(order.id, { status: 'cancelled' });
-                                  toast.success('Sales order cancelled');
+                                onClick={async () => {
+                                  try {
+                                    await updateSalesOrder(order.id, { status: 'cancelled' });
+                                  } catch (error) {
+                                    console.error('Error cancelling order:', error);
+                                  }
                                 }}
                               >
                                 <XCircle className="h-4 w-4 mr-2" />

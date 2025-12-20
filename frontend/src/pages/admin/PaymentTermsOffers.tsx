@@ -49,33 +49,22 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
-
-// Initial data
-const initialPaymentTerms = [
-  { id: '1', name: 'Immediate Payment', earlyDiscount: false, discountPercent: 0, discountDays: 0, active: true },
-  { id: '2', name: 'Net 15', earlyDiscount: true, discountPercent: 2, discountDays: 7, active: true },
-  { id: '3', name: 'Net 30', earlyDiscount: true, discountPercent: 3, discountDays: 10, active: true },
-  { id: '4', name: 'Net 45', earlyDiscount: false, discountPercent: 0, discountDays: 0, active: false },
-];
-
-const initialOffers = [
-  { id: '1', name: 'Summer Sale', discount: 20, startDate: '2024-06-01', endDate: '2024-08-31', availableOn: 'website', status: 'active' },
-  { id: '2', name: 'Bulk Discount', discount: 15, startDate: '2024-01-01', endDate: '2024-12-31', availableOn: 'sales', status: 'active' },
-  { id: '3', name: 'New Year Special', discount: 25, startDate: '2024-12-25', endDate: '2025-01-05', availableOn: 'website', status: 'upcoming' },
-];
-
-const mockCoupons = [
-  { id: '1', code: 'SUMMER20', offerId: '1', offerName: 'Summer Sale', validUntil: '2024-08-31', status: 'unused', customer: null },
-  { id: '2', code: 'BULK15A', offerId: '2', offerName: 'Bulk Discount', validUntil: '2024-12-31', status: 'used', customer: 'John Doe' },
-  { id: '3', code: 'NEWYEAR25', offerId: '3', offerName: 'New Year Special', validUntil: '2025-01-05', status: 'unused', customer: 'Jane Smith' },
-];
+import { useAdminData } from '@/contexts/AdminDataContext';
 
 const PaymentTermsOffers = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  
-  // State management
-  const [paymentTerms, setPaymentTerms] = useState(initialPaymentTerms);
-  const [offers, setOffers] = useState(initialOffers);
+  const {
+    paymentTerms,
+    addPaymentTerm,
+    updatePaymentTerm,
+    deletePaymentTerm,
+    offers,
+    addOffer,
+    updateOffer,
+    deleteOffer,
+    coupons,
+    addCoupon,
+  } = useAdminData();
   
   // Dialog states
   const [showPaymentTermDialog, setShowPaymentTermDialog] = useState(false);
@@ -103,6 +92,12 @@ const PaymentTermsOffers = () => {
     endDate: '',
     availableOn: 'website'
   });
+  const [couponForm, setCouponForm] = useState({
+    offerId: '',
+    quantity: 1,
+    validUntil: '',
+    customerName: '',
+  });
   
   // Payment Term handlers
   const handleAddPaymentTerm = () => {
@@ -123,40 +118,41 @@ const PaymentTermsOffers = () => {
       setEditingPaymentTerm(term);
       setPaymentTermForm({
         name: term.name,
-        earlyDiscount: term.earlyDiscount,
-        discountPercent: term.discountPercent,
-        discountDays: term.discountDays,
-        active: term.active
+        earlyDiscount: term.earlyPaymentDiscount,
+        discountPercent: term.discountPercentage || 0,
+        discountDays: term.discountDays || 0,
+        active: term.active,
       });
       setShowPaymentTermDialog(true);
     }
   };
   
-  const handleDeletePaymentTerm = (termId: string) => {
-    if (window.confirm('Are you sure you want to delete this payment term?')) {
-      setPaymentTerms(paymentTerms.filter(t => t.id !== termId));
-      toast.success('Payment term deleted successfully');
+  const handleDeletePaymentTerm = async (termId: string) => {
+    if (!window.confirm('Are you sure you want to delete this payment term?')) {
+      return;
     }
+    await deletePaymentTerm(termId);
   };
   
-  const handleSavePaymentTerm = () => {
+  const handleSavePaymentTerm = async () => {
     if (!paymentTermForm.name) {
       toast.error('Please enter a term name');
       return;
     }
-    
+
+    const payload = {
+      name: paymentTermForm.name,
+      earlyPaymentDiscount: paymentTermForm.earlyDiscount,
+      discountPercentage: paymentTermForm.discountPercent,
+      discountDays: paymentTermForm.discountDays,
+      discountComputation: 'base' as const,
+      active: paymentTermForm.active,
+    };
+
     if (editingPaymentTerm) {
-      setPaymentTerms(paymentTerms.map(t => 
-        t.id === editingPaymentTerm.id ? { ...t, ...paymentTermForm } : t
-      ));
-      toast.success('Payment term updated successfully');
+      await updatePaymentTerm(editingPaymentTerm.id, payload);
     } else {
-      const newTerm = {
-        id: String(Date.now()),
-        ...paymentTermForm
-      };
-      setPaymentTerms([...paymentTerms, newTerm]);
-      toast.success('Payment term created successfully');
+      await addPaymentTerm(payload);
     }
     setShowPaymentTermDialog(false);
   };
@@ -183,17 +179,17 @@ const PaymentTermsOffers = () => {
         discount: offer.discount,
         startDate: offer.startDate,
         endDate: offer.endDate,
-        availableOn: offer.availableOn
+        availableOn: offer.availableOn,
       });
       setShowOfferDialog(true);
     }
   };
   
   const handleDeleteOffer = (offerId: string) => {
-    if (window.confirm('Are you sure you want to delete this offer?')) {
-      setOffers(offers.filter(o => o.id !== offerId));
-      toast.success('Offer deleted successfully');
+    if (!window.confirm('Are you sure you want to delete this offer?')) {
+      return;
     }
+    deleteOffer(offerId);
   };
   
   const handleSaveOffer = () => {
@@ -202,23 +198,49 @@ const PaymentTermsOffers = () => {
       return;
     }
     
-    const status = new Date(offerForm.startDate) > new Date() ? 'upcoming' : 'active';
-    
+    const now = new Date();
+    const start = new Date(offerForm.startDate);
+    const end = new Date(offerForm.endDate);
+    let status: 'active' | 'upcoming' | 'expired' = 'active';
+    if (start > now) {
+      status = 'upcoming';
+    } else if (end < now) {
+      status = 'expired';
+    }
+
     if (editingOffer) {
-      setOffers(offers.map(o => 
-        o.id === editingOffer.id ? { ...o, ...offerForm, status } : o
-      ));
-      toast.success('Offer updated successfully');
+      updateOffer(editingOffer.id, { ...offerForm, status });
     } else {
-      const newOffer = {
-        id: String(Date.now()),
-        ...offerForm,
-        status
-      };
-      setOffers([...offers, newOffer]);
-      toast.success('Offer created successfully');
+      addOffer({ ...offerForm, status });
     }
     setShowOfferDialog(false);
+  };
+
+  const handleGenerateCoupons = () => {
+    if (!couponForm.offerId || !couponForm.validUntil) {
+      toast.error('Select an offer and validity date');
+      return;
+    }
+    const offer = offers.find(o => o.id === couponForm.offerId);
+    if (!offer) {
+      toast.error('Selected offer not found');
+      return;
+    }
+    const quantity = Math.max(1, couponForm.quantity);
+    for (let i = 0; i < quantity; i += 1) {
+      const code = `${offer.name.slice(0, 4).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      addCoupon({
+        code,
+        offerId: offer.id,
+        offerName: offer.name,
+        validUntil: couponForm.validUntil,
+        customerName: couponForm.customerName || undefined,
+        status: 'unused',
+      });
+    }
+    toast.success('Coupons generated');
+    setShowCouponDialog(false);
+    setCouponForm({ offerId: '', quantity: 1, validUntil: '', customerName: '' });
   };
 
   return (
@@ -361,9 +383,9 @@ const PaymentTermsOffers = () => {
                     <TableRow key={term.id}>
                       <TableCell className="font-medium">{term.name}</TableCell>
                       <TableCell>
-                        {term.earlyDiscount ? (
+                        {term.earlyPaymentDiscount ? (
                           <span className="text-sm">
-                            {term.discountPercent}% if paid within {term.discountDays} days
+                            {term.discountPercentage || 0}% if paid within {term.discountDays || 0} days
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -563,7 +585,7 @@ const PaymentTermsOffers = () => {
                   <div className="space-y-4 py-4">
                     <div>
                       <Label>Select Offer</Label>
-                      <Select>
+                      <Select value={couponForm.offerId} onValueChange={(value) => setCouponForm({ ...couponForm, offerId: value })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select offer" />
                         </SelectTrigger>
@@ -578,29 +600,30 @@ const PaymentTermsOffers = () => {
                     </div>
                     <div>
                       <Label>Quantity</Label>
-                      <Input type="number" placeholder="10" />
+                      <Input
+                        type="number"
+                        placeholder="10"
+                        value={couponForm.quantity}
+                        onChange={(e) => setCouponForm({ ...couponForm, quantity: parseInt(e.target.value, 10) || 1 })}
+                      />
                     </div>
                     <div>
                       <Label>Valid Until</Label>
-                      <Input type="date" />
+                      <Input
+                        type="date"
+                        value={couponForm.validUntil}
+                        onChange={(e) => setCouponForm({ ...couponForm, validUntil: e.target.value })}
+                      />
                     </div>
                     <div>
                       <Label>Assign to Customer (Optional)</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Any customer" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background">
-                          <SelectItem value="any">Any Customer</SelectItem>
-                          <SelectItem value="john">John Doe</SelectItem>
-                          <SelectItem value="jane">Jane Smith</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Input
+                        placeholder="Customer name"
+                        value={couponForm.customerName}
+                        onChange={(e) => setCouponForm({ ...couponForm, customerName: e.target.value })}
+                      />
                     </div>
-                    <Button className="w-full" onClick={() => {
-                      toast.success('Coupons generated');
-                      setShowCouponDialog(false);
-                    }}>
+                    <Button className="w-full" onClick={handleGenerateCoupons}>
                       Generate
                     </Button>
                   </div>
@@ -621,7 +644,14 @@ const PaymentTermsOffers = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockCoupons.map((coupon) => (
+                  {coupons.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No coupons yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                  coupons.map((coupon) => (
                     <TableRow key={coupon.id}>
                       <TableCell>
                         <code className="px-2 py-1 bg-muted rounded text-sm font-mono">
@@ -631,7 +661,7 @@ const PaymentTermsOffers = () => {
                       <TableCell>{coupon.offerName}</TableCell>
                       <TableCell>{coupon.validUntil}</TableCell>
                       <TableCell>
-                        {coupon.customer || <span className="text-muted-foreground">Any</span>}
+                        {coupon.customerName || <span className="text-muted-foreground">Any</span>}
                       </TableCell>
                       <TableCell>
                         <span className={`text-xs px-2 py-1 rounded-full ${
@@ -653,7 +683,7 @@ const PaymentTermsOffers = () => {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))}
                 </TableBody>
               </Table>
             </Card>

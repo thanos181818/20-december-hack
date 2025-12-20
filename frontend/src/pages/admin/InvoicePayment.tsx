@@ -64,7 +64,7 @@ const InvoicePayment = () => {
     ? `Early payment discount of ${paymentTerm.discountPercentage}% has been applied`
     : null;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (formData.amount <= 0) {
       toast.error('Payment amount must be greater than 0');
       return;
@@ -73,14 +73,16 @@ const InvoicePayment = () => {
     const newPaid = invoice.paid + formData.amount;
     const newStatus = newPaid >= invoice.total ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
     
-    updateInvoice(invoice.id, {
-      paid: newPaid,
-      status: newStatus,
-      paidDate: newPaid >= invoice.total ? formData.date : undefined,
-    });
-
-    toast.success('Payment confirmed successfully');
-    setStatus('confirmed');
+    try {
+      await updateInvoice(invoice.id, {
+        paid: newPaid,
+        status: newStatus,
+        paidDate: newPaid >= invoice.total ? formData.date : undefined,
+      });
+      setStatus('confirmed');
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+    }
   };
 
   const handlePrint = () => {

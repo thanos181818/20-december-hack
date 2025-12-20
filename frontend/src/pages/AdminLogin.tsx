@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Mail, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
@@ -22,8 +22,13 @@ const AdminLogin = () => {
     confirmPassword: '',
   });
 
+  useEffect(() => {
+    if (isAuthenticated && isAdmin) {
+      navigate('/admin');
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
+
   if (isAuthenticated && isAdmin) {
-    navigate('/admin');
     return null;
   }
 

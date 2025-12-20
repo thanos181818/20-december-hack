@@ -7,8 +7,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from db import get_session
-from models import User, Contact, UserRole, ContactType
+from backend.db import get_session
+from backend.models import User, Contact, UserRole, ContactType
 from dotenv import load_dotenv
 
 # --- FIX: Load SECRET_KEY from environment variables ---

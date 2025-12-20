@@ -52,32 +52,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
-
-// Initial data
-const initialUsers = [
-  { id: '1', name: 'John Admin', email: 'john@appareldesk.com', phone: '+91 9876543210', address: '123 Main St, Mumbai, Maharashtra', role: 'internal', status: 'active' },
-  { id: '2', name: 'Jane Staff', email: 'jane@appareldesk.com', phone: '+91 9876543211', address: '456 Park Ave, Delhi, NCR', role: 'internal', status: 'active' },
-  { id: '3', name: 'Customer One', email: 'customer1@email.com', phone: '+91 9876543212', address: '789 Garden Road, Bangalore, Karnataka', role: 'portal', status: 'active' },
-  { id: '4', name: 'Customer Two', email: 'customer2@email.com', phone: '+91 9876543213', address: '321 Lake View, Pune, Maharashtra', role: 'portal', status: 'active' },
-  { id: '5', name: 'Customer Three', email: 'customer3@email.com', phone: '+91 9876543214', address: '654 Hill Station, Chennai, Tamil Nadu', role: 'portal', status: 'archived' },
-];
-
-const initialContacts = [
-  { id: '1', name: 'ABC Textiles', email: 'abc@textiles.com', phone: '+91 9876543220', address: 'Industrial Area, Surat, Gujarat', type: 'vendor', status: 'active' },
-  { id: '2', name: 'XYZ Fabrics', email: 'xyz@fabrics.com', phone: '+91 9876543221', address: 'Textile Market, Ludhiana, Punjab', type: 'vendor', status: 'active' },
-  { id: '3', name: 'Retail Customer 1', email: 'retail1@email.com', phone: '+91 9876543222', address: 'Shopping Complex, Kolkata, West Bengal', type: 'customer', status: 'active' },
-  { id: '4', name: 'Wholesale Buyer', email: 'wholesale@email.com', phone: '+91 9876543223', address: 'Trade Center, Jaipur, Rajasthan', type: 'both', status: 'active' },
-];
+import { useAdminData } from '@/contexts/AdminDataContext';
 
 const UsersContacts = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [contactSearchQuery, setContactSearchQuery] = useState('');
-  
-  // Users and Contacts state
-  const [users, setUsers] = useState(initialUsers);
-  const [contacts, setContacts] = useState(initialContacts);
+  const {
+    users,
+    addUser,
+    updateUser,
+    deleteUser,
+    contacts,
+    addContact,
+    updateContact,
+    deleteContact,
+  } = useAdminData();
   
   // Dialog states
   const [userDialogOpen, setUserDialogOpen] = useState(false);
@@ -132,10 +123,10 @@ const UsersContacts = () => {
   };
 
   const handleDeleteUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== userId));
-      toast.success('User deleted successfully');
+    if (!window.confirm('Are you sure you want to delete this user?')) {
+      return;
     }
+    deleteUser(userId);
   };
 
   const handleEditContact = (contactId: string) => {
@@ -147,11 +138,11 @@ const UsersContacts = () => {
     }
   };
 
-  const handleDeleteContact = (contactId: string) => {
-    if (window.confirm('Are you sure you want to delete this contact?')) {
-      setContacts(contacts.filter(c => c.id !== contactId));
-      toast.success('Contact deleted successfully');
+  const handleDeleteContact = async (contactId: string) => {
+    if (!window.confirm('Are you sure you want to delete this contact?')) {
+      return;
     }
+    await deleteContact(contactId);
   };
 
   const handleSaveUser = () => {
@@ -161,41 +152,23 @@ const UsersContacts = () => {
     }
 
     if (editingUser) {
-      // Update existing user
-      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...userForm } : u));
-      toast.success('User updated successfully');
+      updateUser(editingUser.id, { ...userForm });
     } else {
-      // Add new user
-      const newUser = {
-        id: String(Date.now()),
-        ...userForm,
-        status: 'active'
-      };
-      setUsers([...users, newUser]);
-      toast.success('User added successfully');
+      addUser({ ...userForm, status: 'active', confirmed: true });
     }
     setUserDialogOpen(false);
   };
 
-  const handleSaveContact = () => {
+  const handleSaveContact = async () => {
     if (!contactForm.name || !contactForm.email || !contactForm.phone) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     if (editingContact) {
-      // Update existing contact
-      setContacts(contacts.map(c => c.id === editingContact.id ? { ...c, ...contactForm } : c));
-      toast.success('Contact updated successfully');
+      await updateContact(editingContact.id, { ...contactForm });
     } else {
-      // Add new contact
-      const newContact = {
-        id: String(Date.now()),
-        ...contactForm,
-        status: 'active'
-      };
-      setContacts([...contacts, newContact]);
-      toast.success('Contact added successfully');
+      await addContact({ ...contactForm, status: 'active' });
     }
     setContactDialogOpen(false);
   };

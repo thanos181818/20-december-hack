@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -32,41 +32,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminData, ProductStatus } from '@/contexts/AdminDataContext';
-import { products } from '@/data/products';
 import { toast } from 'sonner';
 
 const ProductsAdmin = () => {
   const navigate = useNavigate();
-  const { products: adminProducts, addProduct, updateProduct, deleteProduct } = useAdminData();
+  const { products: adminProducts, updateProduct, deleteProduct } = useAdminData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<ProductStatus>('confirmed');
-  const [initialized, setInitialized] = useState(false);
-
-  // Initialize with sample products if empty (only on first load)
-  useEffect(() => {
-    if (!initialized && adminProducts.length === 0 && products.length > 0) {
-      products.forEach((p, idx) => {
-        const status: ProductStatus = idx % 5 === 0 ? 'new' : idx % 7 === 0 ? 'archived' : 'confirmed';
-        addProduct({
-          name: p.name,
-          category: p.category.charAt(0).toUpperCase() + p.category.slice(1),
-          type: p.type.charAt(0).toUpperCase() + p.type.slice(1),
-          material: p.material.charAt(0).toUpperCase() + p.material.slice(1),
-          colors: p.colors || [],
-          stock: Math.floor(Math.random() * 100) + 10,
-          salesPrice: p.price,
-          salesTax: 18,
-          purchasePrice: p.price * 0.6,
-          purchaseTax: 12,
-          published: status === 'confirmed' && idx % 7 !== 0,
-          status,
-          description: p.description,
-          images: p.images || [],
-        });
-      });
-      setInitialized(true);
-    }
-  }, [adminProducts.length, initialized, addProduct]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredProducts = adminProducts.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -74,7 +46,7 @@ const ProductsAdmin = () => {
     return matchesSearch && matchesTab;
   });
 
-  const handlePublish = (productId: string) => {
+  const handleTogglePublished = async (productId: string) => {
     const product = adminProducts.find(p => p.id === productId);
     if (!product) return;
     
@@ -83,19 +55,27 @@ const ProductsAdmin = () => {
       return;
     }
     
-    updateProduct(productId, { published: !product.published });
-    toast.success(product.published ? 'Product unpublished' : 'Product published successfully');
+    try {
+      await updateProduct(productId, { published: !product.published });
+    } catch (error) {
+      console.error('Error updating product:', error);
+    }
+  };
+  const handleArchive = async (productId: string) => {
+    try {
+      await updateProduct(productId, { status: 'archived', published: false });
+    } catch (error) {
+      console.error('Error archiving product:', error);
+    }
   };
 
-  const handleArchive = (productId: string) => {
-    updateProduct(productId, { status: 'archived', published: false });
-    toast.success('Product archived');
-  };
-
-  const handleDelete = (productId: string) => {
+  const handleDelete = async (productId: string) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-      deleteProduct(productId);
-      toast.success('Product deleted');
+      try {
+        await deleteProduct(productId);
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      }
     }
   };
 

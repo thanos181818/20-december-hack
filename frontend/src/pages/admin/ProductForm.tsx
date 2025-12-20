@@ -82,7 +82,7 @@ const ProductForm = () => {
     }
   }, [existingProduct]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.name || !formData.category || !formData.type) {
@@ -100,24 +100,26 @@ const ProductForm = () => {
       return;
     }
 
-    if (isEditing && id) {
-      updateProduct(id, {
-        ...formData,
-        status,
-        images,
-        price: formData.salesPrice,
-      });
-      toast.success('Product updated successfully');
-    } else {
-      addProduct({
-        ...formData,
-        status,
-        images,
-        price: formData.salesPrice,
-      });
-      toast.success('Product created successfully');
+    try {
+      if (isEditing && id) {
+        await updateProduct(id, {
+          ...formData,
+          status,
+          images,
+          price: formData.salesPrice,
+        });
+      } else {
+        await addProduct({
+          ...formData,
+          status,
+          images,
+          price: formData.salesPrice,
+        });
+      }
+      navigate('/admin/products');
+    } catch (error) {
+      console.error('Error saving product:', error);
     }
-    navigate('/admin/products');
   };
 
   const toggleColor = (color: string) => {

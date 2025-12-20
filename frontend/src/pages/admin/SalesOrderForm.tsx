@@ -138,7 +138,7 @@ const SalesOrderForm = () => {
   const discountAmount = subtotal * (couponDiscount / 100);
   const grandTotal = subtotal + taxTotal - discountAmount;
 
-  const handleSubmit = (status: 'draft' | 'confirmed') => {
+  const handleSubmit = async (status: 'draft' | 'confirmed') => {
     if (!formData.customer) {
       toast.error('Please select a customer');
       return;
@@ -159,43 +159,45 @@ const SalesOrderForm = () => {
     const discountAmount = subtotal * (couponDiscount / 100);
     const total = subtotal + taxTotal - discountAmount;
 
-    if (isEditing && id) {
-      updateSalesOrder(id, {
-        customer: customer.name || 'Unknown',
-        customerId: customer.id,
-        paymentTerm: formData.paymentTerm,
-        date: formData.date,
-        lineItems,
-        couponCode: formData.couponCode,
-        discount: couponDiscount,
-        subtotal,
-        tax: taxTotal,
-        total,
+    try {
+      if (isEditing && id) {
+        await updateSalesOrder(id, {
+          customer: customer.name || 'Unknown',
+          customerId: customer.id,
+          paymentTerm: formData.paymentTerm,
+          date: formData.date,
+          lineItems,
+          couponCode: formData.couponCode,
+          discount: couponDiscount,
+          subtotal,
+          tax: taxTotal,
+          total,
+          status,
+        });
+      } else {
+        const orderNumber = `SO-${new Date().getFullYear()}-${String(Date.now()).slice(-3).padStart(3, '0')}`;
+        await addSalesOrder({
+          orderNumber,
+          customer: customer.name || 'Unknown',
+          customerId: customer.id,
+          paymentTerm: formData.paymentTerm,
+          date: formData.date,
+          lineItems,
+          couponCode: formData.couponCode,
+          discount: couponDiscount,
+          subtotal,
+          tax: taxTotal,
+          total,
         status,
       });
-      toast.success(`Sales order ${status === 'confirmed' ? 'confirmed' : 'updated'}`);
-    } else {
-      const orderNumber = `SO-${new Date().getFullYear()}-${String(Date.now()).slice(-3).padStart(3, '0')}`;
-      addSalesOrder({
-        orderNumber,
-        customer: customer.name || 'Unknown',
-        customerId: customer.id,
-        paymentTerm: formData.paymentTerm,
-        date: formData.date,
-        lineItems,
-        couponCode: formData.couponCode,
-        discount: couponDiscount,
-        subtotal,
-        tax: taxTotal,
-        total,
-        status,
-      });
-      toast.success(`Sales order ${status === 'confirmed' ? 'confirmed' : 'saved as draft'}`);
+      }
+      navigate('/admin/billing');
+    } catch (error) {
+      console.error('Error saving sales order:', error);
     }
-    navigate('/admin/billing');
   };
 
-  const handleCreateInvoice = () => {
+  const handleCreateInvoice = async () => {
     if (!existingOrder || existingOrder.status !== 'confirmed') {
       toast.error('Only confirmed orders can be invoiced');
       return;
@@ -213,24 +215,26 @@ const SalesOrderForm = () => {
     const dueDate = new Date(invoiceDate);
     dueDate.setDate(dueDate.getDate() + daysToAdd);
 
-    const newInvoiceId = addInvoice({
-      invoiceNumber: `INV-${Date.now()}`,
-      customer: existingOrder.customer,
-      customerId: existingOrder.customerId,
-      salesOrderId: existingOrder.id,
-      paymentTerm: existingOrder.paymentTerm,
-      invoiceDate: invoiceDate.toISOString().split('T')[0],
-      dueDate: dueDate.toISOString().split('T')[0],
-      lineItems: existingOrder.lineItems,
-      subtotal: existingOrder.subtotal,
-      tax: existingOrder.tax,
-      total: existingOrder.total,
-      paid: 0,
-      status: 'unpaid',
-    });
-
-    toast.success('Invoice created successfully');
-    navigate('/admin/billing');
+    try {
+      await addInvoice({
+        invoiceNumber: `INV-${Date.now()}`,
+        customer: existingOrder.customer,
+        customerId: existingOrder.customerId,
+        salesOrderId: existingOrder.id,
+        paymentTerm: existingOrder.paymentTerm,
+        invoiceDate: invoiceDate.toISOString().split('T')[0],
+        dueDate: dueDate.toISOString().split('T')[0],
+        lineItems: existingOrder.lineItems,
+        subtotal: existingOrder.subtotal,
+        tax: existingOrder.tax,
+        total: existingOrder.total,
+        paid: 0,
+        status: 'unpaid',
+      });
+      navigate('/admin/billing');
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+    }
   };
 
   const handlePrint = () => {

@@ -1,6 +1,23 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { api, API_URL } from '@/lib/api';
 import { toast } from 'sonner';
+import {
+  productsApi,
+  contactsApi,
+  salesOrdersApi,
+  invoicesApi,
+  purchaseOrdersApi,
+  vendorBillsApi,
+  paymentsApi,
+  paymentTermsApi,
+  type Product as BackendProduct,
+  type Contact as BackendContact,
+  type SaleOrder as BackendSaleOrder,
+  type Invoice as BackendInvoice,
+  type PurchaseOrder as BackendPurchaseOrder,
+  type VendorBill as BackendVendorBill,
+  type PaymentTerm as BackendPaymentTerm,
+} from '@/lib/adminApi';
 
 // Types
 export type ProductStatus = 'new' | 'confirmed' | 'archived';
@@ -37,8 +54,136 @@ export interface VendorBill { id: string; billNumber: string; vendor: string; ve
 export interface User { id: string; name: string; email: string; phone?: string; address?: string; role: UserRole; status: 'active' | 'archived'; confirmed: boolean; }
 export interface Contact { id: string; name?: string; email?: string; phone?: string; address?: string; type: ContactType; status: 'active' | 'archived'; }
 export interface PaymentTerm { id: string; name: string; earlyPaymentDiscount: boolean; discountPercentage?: number; discountDays?: number; discountComputation?: 'base' | 'total'; active: boolean; }
-export interface Offer { id: string; name: string; discountPercentage: number; startDate: string; endDate: string; availableOn: 'sales' | 'website' | 'both'; targetType: ContactType; }
-export interface Coupon { id: string; code: string; offerId: string; offerName: string; customerId?: string; customerName?: string; validUntil: string; used: boolean; usedDate?: string; }
+export interface Offer {
+  id: string;
+  name: string;
+  discount: number;
+  startDate: string;
+  endDate: string;
+  availableOn: 'sales' | 'website' | 'both';
+  status: 'active' | 'upcoming' | 'expired';
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  offerId: string;
+  offerName: string;
+  validUntil: string;
+  customerName?: string;
+  status: 'unused' | 'used';
+}
+
+const DEFAULT_USERS: User[] = [
+  {
+    id: 'user-1',
+    name: 'John Admin',
+    email: 'john@appareldesk.com',
+    phone: '+91 9876543210',
+    address: '123 Main St, Mumbai, Maharashtra',
+    role: 'internal',
+    status: 'active',
+    confirmed: true,
+  },
+  {
+    id: 'user-2',
+    name: 'Jane Staff',
+    email: 'jane@appareldesk.com',
+    phone: '+91 9876543211',
+    address: '456 Park Ave, Delhi, NCR',
+    role: 'internal',
+    status: 'active',
+    confirmed: true,
+  },
+  {
+    id: 'user-3',
+    name: 'Customer One',
+    email: 'customer1@email.com',
+    phone: '+91 9876543212',
+    address: '789 Garden Road, Bangalore, Karnataka',
+    role: 'portal',
+    status: 'active',
+    confirmed: true,
+  },
+  {
+    id: 'user-4',
+    name: 'Customer Two',
+    email: 'customer2@email.com',
+    phone: '+91 9876543213',
+    address: '321 Lake View, Pune, Maharashtra',
+    role: 'portal',
+    status: 'active',
+    confirmed: true,
+  },
+  {
+    id: 'user-5',
+    name: 'Customer Three',
+    email: 'customer3@email.com',
+    phone: '+91 9876543214',
+    address: '654 Hill Station, Chennai, Tamil Nadu',
+    role: 'portal',
+    status: 'archived',
+    confirmed: true,
+  },
+];
+
+const DEFAULT_OFFERS: Offer[] = [
+  { id: 'offer-1', name: 'Summer Sale', discount: 20, startDate: '2024-06-01', endDate: '2024-08-31', availableOn: 'website', status: 'active' },
+  { id: 'offer-2', name: 'Bulk Discount', discount: 15, startDate: '2024-01-01', endDate: '2024-12-31', availableOn: 'sales', status: 'active' },
+  { id: 'offer-3', name: 'New Year Special', discount: 25, startDate: '2024-12-25', endDate: '2025-01-05', availableOn: 'website', status: 'upcoming' },
+];
+
+const DEFAULT_COUPONS: Coupon[] = [
+  { id: 'coupon-1', code: 'SUMMER20', offerId: 'offer-1', offerName: 'Summer Sale', validUntil: '2024-08-31', status: 'unused' },
+  { id: 'coupon-2', code: 'BULK15A', offerId: 'offer-2', offerName: 'Bulk Discount', validUntil: '2024-12-31', customerName: 'John Doe', status: 'used' },
+  { id: 'coupon-3', code: 'NEWYEAR25', offerId: 'offer-3', offerName: 'New Year Special', validUntil: '2025-01-05', customerName: 'Jane Smith', status: 'unused' },
+];
+
+const STORAGE_VERSION = '1';
+const STORAGE_VERSION_KEY = 'admin_data_version';
+
+const STORAGE_KEYS = {
+  users: 'admin_users',
+  offers: 'admin_offers',
+  coupons: 'admin_coupons',
+} as const;
+
+const ensureStorageVersion = () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const currentVersion = window.localStorage.getItem(STORAGE_VERSION_KEY);
+  if (currentVersion === STORAGE_VERSION) {
+    return;
+  }
+  Object.values(STORAGE_KEYS).forEach(key => window.localStorage.removeItem(key));
+  window.localStorage.setItem(STORAGE_VERSION_KEY, STORAGE_VERSION);
+};
+
+const loadFromStorage = <T,>(key: string, fallback: T): T => {
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+  ensureStorageVersion();
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? (JSON.parse(value) as T) : fallback;
+  } catch (error) {
+    console.warn('Failed to load admin data from storage', error);
+    return fallback;
+  }
+};
+
+const saveToStorage = <T,>(key: string, value: T) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.warn('Failed to save admin data to storage', error);
+  }
+};
 
 // Backend Data Shape (for mapping)
 interface BackendProduct {
@@ -112,423 +257,229 @@ const generateId = () => Date.now().toString(36) + Math.random().toString(36).su
 export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   
   const [products, setProducts] = useState<AdminProduct[]>([]);
-
-  // --- MOCK STATE ---
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [vendorBills, setVendorBills] = useState<VendorBill[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>(() => loadFromStorage(STORAGE_KEYS.users, DEFAULT_USERS));
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerm[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [offers, setOffers] = useState<Offer[]>(() => loadFromStorage(STORAGE_KEYS.offers, DEFAULT_OFFERS));
+  const [coupons, setCoupons] = useState<Coupon[]>(() => loadFromStorage(STORAGE_KEYS.coupons, DEFAULT_COUPONS));
   const [autoInvoicing, setAutoInvoicing] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // --- INITIALIZE DUMMY DATA ---
+  // Persist local-only collections so admin changes survive reloads
   useEffect(() => {
-    // Initialize Admin Products (if empty after API fetch)
-    if (products.length === 0) {
-      const initialProducts: AdminProduct[] = [
-        {
-          id: '1',
-          name: 'Cotton Shirt',
-          category: 'men',
-          type: 'shirts',
-          material: 'cotton',
-          colors: ['Blue', 'White', 'Black'],
-          stock: 50,
-          salesPrice: 1200,
-          salesTax: 18,
-          purchasePrice: 720,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: 'Premium cotton shirt for formal wear',
-          images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Cotton+Shirt'],
-          price: 1200,
-        },
-        {
-          id: '2',
-          name: 'Formal Pants',
-          category: 'men',
-          type: 'pants',
-          material: 'polyester',
-          colors: ['Black', 'Grey', 'Navy'],
-          stock: 35,
-          salesPrice: 1800,
-          salesTax: 18,
-          purchasePrice: 1080,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: 'Classic formal pants for business attire',
-          images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Formal+Pants'],
-          price: 1800,
-        },
-        {
-          id: '3',
-          name: 'Silk Kurta',
-          category: 'women',
-          type: 'kurtas',
-          material: 'silk',
-          colors: ['Red', 'Green', 'Gold'],
-          stock: 25,
-          salesPrice: 2500,
-          salesTax: 18,
-          purchasePrice: 1500,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: 'Elegant silk kurta for special occasions',
-          images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Silk+Kurta'],
-          price: 2500,
-        },
-        {
-          id: '4',
-          name: 'Designer Dress',
-          category: 'women',
-          type: 'dresses',
-          material: 'silk',
-          colors: ['Pink', 'Purple', 'Blue'],
-          stock: 20,
-          salesPrice: 3500,
-          salesTax: 18,
-          purchasePrice: 2100,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: 'Stylish designer dress for parties',
-          images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Designer+Dress'],
-          price: 3500,
-        },
-        {
-          id: '5',
-          name: 'Wool Jacket',
-          category: 'men',
-          type: 'jackets',
-          material: 'wool',
-          colors: ['Brown', 'Black', 'Grey'],
-          stock: 15,
-          salesPrice: 4500,
-          salesTax: 18,
-          purchasePrice: 2700,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: 'Warm wool jacket for winter',
-          images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Wool+Jacket'],
-          price: 4500,
-        },
-        {
-          id: '6',
-          name: 'Linen Shirt',
-          category: 'men',
-          type: 'shirts',
-          material: 'linen',
-          colors: ['White', 'Beige', 'Light Blue'],
-          stock: 40,
-          salesPrice: 1500,
-          salesTax: 18,
-          purchasePrice: 900,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: 'Comfortable linen shirt for summer',
-          images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Linen+Shirt'],
-          price: 1500,
-        },
-      ];
-      setProducts(initialProducts);
-    }
+    saveToStorage(STORAGE_KEYS.users, users);
+  }, [users]);
 
-    // Initialize Contacts
-    if (contacts.length === 0) {
-      const initialContacts: Contact[] = [
-        { id: 'c1', name: 'Rajesh Kumar', email: 'rajesh@example.com', phone: '+91 98765 43210', address: '123 MG Road, Bangalore, Karnataka 560001', type: 'customer', status: 'active' },
-        { id: 'c2', name: 'Priya Sharma', email: 'priya@example.com', phone: '+91 98765 43211', address: '456 Park Street, Kolkata, West Bengal 700016', type: 'customer', status: 'active' },
-        { id: 'c3', name: 'Amit Patel', email: 'amit@example.com', phone: '+91 98765 43212', address: '789 Connaught Place, New Delhi 110001', type: 'customer', status: 'active' },
-        { id: 'c4', name: 'Global Textiles Pvt Ltd', email: 'sales@globaltextiles.com', phone: '+91 22 2345 6789', address: '15 Industrial Area, Surat, Gujarat 395006', type: 'vendor', status: 'active' },
-        { id: 'c5', name: 'Fashion Fabrics Inc', email: 'orders@fashionfabrics.com', phone: '+91 44 3456 7890', address: '88 Textile Hub, Chennai, Tamil Nadu 600002', type: 'vendor', status: 'active' },
-        { id: 'c6', name: 'Premium Suppliers', email: 'info@premiumsuppliers.com', phone: '+91 80 4567 8901', address: '22 Supply Chain Road, Mumbai, Maharashtra 400001', type: 'vendor', status: 'active' },
-      ];
-      setContacts(initialContacts);
-    }
-
-    // Initialize Payment Terms
-    if (paymentTerms.length === 0) {
-      const initialTerms: PaymentTerm[] = [
-        { id: 'pt1', name: 'Net 30', earlyPaymentDiscount: false, active: true },
-        { id: 'pt2', name: 'Net 15', earlyPaymentDiscount: false, active: true },
-        { id: 'pt3', name: '2/10 Net 30', earlyPaymentDiscount: true, discountPercentage: 2, discountDays: 10, discountComputation: 'base', active: true },
-        { id: 'pt4', name: 'Due on Receipt', earlyPaymentDiscount: false, active: true },
-      ];
-      setPaymentTerms(initialTerms);
-    }
-
-    // Initialize Sales Orders
-    if (salesOrders.length === 0) {
-      const initialSalesOrders: SalesOrder[] = [
-        {
-          id: 'so1',
-          orderNumber: 'SO-2025-001',
-          customer: 'Rajesh Kumar',
-          customerId: 'c1',
-          paymentTerm: 'pt1',
-          date: '2025-12-15',
-          lineItems: [
-            { id: 'li1', productId: '1', productName: 'Cotton Shirt', quantity: 5, unitPrice: 1200, tax: 18, total: 7080 },
-            { id: 'li2', productId: '2', productName: 'Formal Pants', quantity: 3, unitPrice: 1800, tax: 18, total: 6372 },
-          ],
-          discount: 0,
-          subtotal: 12000,
-          tax: 2160,
-          total: 14160,
-          status: 'confirmed',
-        },
-        {
-          id: 'so2',
-          orderNumber: 'SO-2025-002',
-          customer: 'Priya Sharma',
-          customerId: 'c2',
-          paymentTerm: 'pt3',
-          date: '2025-12-18',
-          lineItems: [
-            { id: 'li3', productId: '3', productName: 'Silk Kurta', quantity: 2, unitPrice: 2500, tax: 18, total: 5900 },
-            { id: 'li4', productId: '4', productName: 'Designer Dress', quantity: 1, unitPrice: 3500, tax: 18, total: 4130 },
-          ],
-          couponCode: 'SAVE10',
-          discount: 10,
-          subtotal: 6000,
-          tax: 1080,
-          total: 6372,
-          status: 'confirmed',
-        },
-        {
-          id: 'so3',
-          orderNumber: 'SO-2025-003',
-          customer: 'Amit Patel',
-          customerId: 'c3',
-          paymentTerm: 'pt2',
-          date: '2025-12-20',
-          lineItems: [
-            { id: 'li5', productId: '5', productName: 'Wool Jacket', quantity: 2, unitPrice: 4500, tax: 18, total: 10620 },
-          ],
-          discount: 0,
-          subtotal: 9000,
-          tax: 1620,
-          total: 10620,
-          status: 'draft',
-        },
-      ];
-      setSalesOrders(initialSalesOrders);
-    }
-
-    // Initialize Invoices
-    if (invoices.length === 0) {
-      const initialInvoices: Invoice[] = [
-        {
-          id: 'inv1',
-          invoiceNumber: 'INV-2025-001',
-          customer: 'Rajesh Kumar',
-          customerId: 'c1',
-          salesOrderId: 'so1',
-          paymentTerm: 'pt1',
-          invoiceDate: '2025-12-15',
-          dueDate: '2026-01-14',
-          lineItems: [
-            { id: 'li1', productId: '1', productName: 'Cotton Shirt', quantity: 5, unitPrice: 1200, tax: 18, total: 7080 },
-            { id: 'li2', productId: '2', productName: 'Formal Pants', quantity: 3, unitPrice: 1800, tax: 18, total: 6372 },
-          ],
-          subtotal: 12000,
-          tax: 2160,
-          total: 14160,
-          paid: 0,
-          status: 'unpaid',
-        },
-        {
-          id: 'inv2',
-          invoiceNumber: 'INV-2025-002',
-          customer: 'Priya Sharma',
-          customerId: 'c2',
-          salesOrderId: 'so2',
-          paymentTerm: 'pt3',
-          invoiceDate: '2025-12-18',
-          dueDate: '2026-01-17',
-          lineItems: [
-            { id: 'li3', productId: '3', productName: 'Silk Kurta', quantity: 2, unitPrice: 2500, tax: 18, total: 5900 },
-            { id: 'li4', productId: '4', productName: 'Designer Dress', quantity: 1, unitPrice: 3500, tax: 18, total: 4130 },
-          ],
-          subtotal: 6000,
-          tax: 1080,
-          total: 6372,
-          paid: 3000,
-          status: 'partial',
-        },
-        {
-          id: 'inv3',
-          invoiceNumber: 'INV-2025-003',
-          customer: 'Amit Patel',
-          customerId: 'c3',
-          invoiceDate: '2025-11-20',
-          dueDate: '2025-12-05',
-          lineItems: [
-            { id: 'li6', productId: '6', productName: 'Linen Shirt', quantity: 4, unitPrice: 1500, tax: 18, total: 7080 },
-          ],
-          subtotal: 6000,
-          tax: 1080,
-          total: 7080,
-          paid: 0,
-          status: 'unpaid',
-        },
-      ];
-      setInvoices(initialInvoices);
-    }
-
-    // Initialize Purchase Orders
-    if (purchaseOrders.length === 0) {
-      const initialPurchaseOrders: PurchaseOrder[] = [
-        {
-          id: 'po1',
-          orderNumber: 'PO-2025-001',
-          vendor: 'Global Textiles Pvt Ltd',
-          vendorId: 'c4',
-          date: '2025-12-10',
-          lineItems: [
-            { id: 'li7', productId: '1', productName: 'Cotton Fabric', quantity: 100, unitPrice: 500, tax: 12, total: 56000 },
-            { id: 'li8', productId: '2', productName: 'Polyester Thread', quantity: 50, unitPrice: 200, tax: 12, total: 11200 },
-          ],
-          subtotal: 60000,
-          tax: 7200,
-          total: 67200,
-          status: 'confirmed',
-        },
-        {
-          id: 'po2',
-          orderNumber: 'PO-2025-002',
-          vendor: 'Fashion Fabrics Inc',
-          vendorId: 'c5',
-          date: '2025-12-16',
-          lineItems: [
-            { id: 'li9', productId: '3', productName: 'Silk Material', quantity: 25, unitPrice: 1200, tax: 12, total: 33600 },
-          ],
-          subtotal: 30000,
-          tax: 3600,
-          total: 33600,
-          status: 'confirmed',
-        },
-        {
-          id: 'po3',
-          orderNumber: 'PO-2025-003',
-          vendor: 'Premium Suppliers',
-          vendorId: 'c6',
-          date: '2025-12-19',
-          lineItems: [
-            { id: 'li10', productId: '4', productName: 'Wool Material', quantity: 40, unitPrice: 1500, tax: 12, total: 67200 },
-            { id: 'li11', productId: '5', productName: 'Buttons Pack', quantity: 200, unitPrice: 50, tax: 12, total: 11200 },
-          ],
-          subtotal: 70000,
-          tax: 8400,
-          total: 78400,
-          status: 'draft',
-        },
-      ];
-      setPurchaseOrders(initialPurchaseOrders);
-    }
-
-    // Initialize Vendor Bills
-    if (vendorBills.length === 0) {
-      const initialVendorBills: VendorBill[] = [
-        {
-          id: 'vb1',
-          billNumber: 'BILL-2025-001',
-          vendor: 'Global Textiles Pvt Ltd',
-          vendorId: 'c4',
-          purchaseOrderId: 'po1',
-          billDate: '2025-12-10',
-          dueDate: '2026-01-09',
-          lineItems: [
-            { id: 'li7', productId: '1', productName: 'Cotton Fabric', quantity: 100, unitPrice: 500, tax: 12, total: 56000 },
-            { id: 'li8', productId: '2', productName: 'Polyester Thread', quantity: 50, unitPrice: 200, tax: 12, total: 11200 },
-          ],
-          subtotal: 60000,
-          tax: 7200,
-          total: 67200,
-          paid: 67200,
-          status: 'paid',
-        },
-        {
-          id: 'vb2',
-          billNumber: 'BILL-2025-002',
-          vendor: 'Fashion Fabrics Inc',
-          vendorId: 'c5',
-          purchaseOrderId: 'po2',
-          billDate: '2025-12-16',
-          dueDate: '2026-01-15',
-          lineItems: [
-            { id: 'li9', productId: '3', productName: 'Silk Material', quantity: 25, unitPrice: 1200, tax: 12, total: 33600 },
-          ],
-          subtotal: 30000,
-          tax: 3600,
-          total: 33600,
-          paid: 15000,
-          status: 'partial',
-        },
-        {
-          id: 'vb3',
-          billNumber: 'BILL-2025-003',
-          vendor: 'Premium Suppliers',
-          vendorId: 'c6',
-          billDate: '2025-11-25',
-          dueDate: '2025-12-10',
-          lineItems: [
-            { id: 'li12', productId: '6', productName: 'Zipper Pack', quantity: 150, unitPrice: 80, tax: 12, total: 13440 },
-          ],
-          subtotal: 12000,
-          tax: 1440,
-          total: 13440,
-          paid: 0,
-          status: 'unpaid',
-        },
-      ];
-      setVendorBills(initialVendorBills);
-    }
-  }, [products.length, contacts.length, paymentTerms.length, salesOrders.length, invoices.length, purchaseOrders.length, vendorBills.length]);
-
-  // --- 1. INITIAL FETCH FROM BACKEND ---
   useEffect(() => {
-    const fetchProducts = async () => {
+    saveToStorage(STORAGE_KEYS.offers, offers);
+  }, [offers]);
+
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.coupons, coupons);
+  }, [coupons]);
+
+  // Helper to map backend product to admin product
+  const mapBackendProduct = (bp: BackendProduct): AdminProduct => ({
+    id: bp.id.toString(),
+    name: bp.name,
+    category: 'men', // Default, can be inferred from category field
+    type: 'shirts', // Default, can be inferred from category field
+    material: 'cotton', // Default
+    colors: ['Blue'], // Default
+    stock: bp.current_stock,
+    salesPrice: bp.price,
+    salesTax: 18,
+    purchasePrice: bp.price * 0.6,
+    purchaseTax: 12,
+    published: true,
+    status: 'confirmed',
+    description: bp.description || '',
+    images: bp.image_url ? [bp.image_url] : ['https://placehold.co/600x800/e2e8f0/1e293b?text=' + encodeURIComponent(bp.name)],
+    price: bp.price,
+  });
+
+  // Helper to map backend contact to admin contact
+  const mapBackendContact = (bc: BackendContact): Contact => ({
+    id: bc.id.toString(),
+    name: bc.name,
+    email: bc.email,
+    phone: bc.phone,
+    address: bc.address,
+    type: bc.contact_type as ContactType,
+    status: 'active',
+  });
+
+  // Helper to map backend payment term to admin payment term
+  const mapBackendPaymentTerm = (bpt: BackendPaymentTerm): PaymentTerm => ({
+    id: bpt.id.toString(),
+    name: bpt.name,
+    earlyPaymentDiscount: bpt.early_payment_discount > 0,
+    discountPercentage: bpt.early_payment_discount,
+    discountDays: bpt.early_payment_days,
+    discountComputation: 'base',
+    active: true,
+  });
+
+  // Fetch all data from backend
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const res = await api.get<BackendProduct[]>('/orders/products');
+        setLoading(true);
         
-        const mappedProducts: AdminProduct[] = res.data.map((p) => ({
-          id: p.id.toString(),
-          name: p.name,
-          // FIXED: Strict types here too
-          category: 'Men', 
-          type: 'Shirts',
-          material: 'Cotton',
-          
-          colors: ['Blue', 'White'],
-          stock: p.current_stock,
-          salesPrice: p.price,
-          price: p.price,
-          salesTax: 18,
-          purchasePrice: p.price * 0.6,
-          purchaseTax: 12,
-          published: true,
-          status: 'confirmed',
-          description: `High quality ${p.name}`,
-          images: [`https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(p.name)}`],
-        }));
-
-        setProducts(mappedProducts);
-      } catch (err) {
-        console.error("Failed to load products from API:", err);
+        // Fetch products
+        const productsRes = await productsApi.getAll();
+        setProducts(productsRes.data.map(mapBackendProduct));
+        
+        // Fetch contacts
+        const contactsRes = await contactsApi.getAll();
+        setContacts(contactsRes.data.map(mapBackendContact));
+        
+        // Fetch payment terms
+        const paymentTermsRes = await paymentTermsApi.getAll();
+        setPaymentTerms(paymentTermsRes.data.map(mapBackendPaymentTerm));
+        
+        // Fetch sales orders, invoices, purchase orders, vendor bills
+        const [salesOrdersRes, invoicesRes, purchaseOrdersRes, vendorBillsRes] = await Promise.all([
+          salesOrdersApi.getAll(),
+          invoicesApi.getAll(),
+          purchaseOrdersApi.getAll(),
+          vendorBillsApi.getAll(),
+        ]);
+        
+        // Map sales orders
+        setSalesOrders(salesOrdersRes.data.map((so): SalesOrder => ({
+          id: so.id.toString(),
+          orderNumber: so.order_number,
+          customer: so.customer?.name || 'Unknown',
+          customerId: so.customer_id.toString(),
+          date: so.order_date,
+          lineItems: so.lines?.map(line => ({
+            id: line.id?.toString() || '',
+            productId: line.product_id.toString(),
+            productName: 'Product ' + line.product_id,
+            quantity: line.quantity,
+            unitPrice: line.unit_price,
+            tax: line.tax_rate,
+            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
+          })) || [],
+          discount: so.discount_amount,
+          subtotal: so.total_amount - so.tax_amount,
+          tax: so.tax_amount,
+          total: so.total_amount,
+          status: so.status as OrderStatus,
+        })));
+        
+        // Map invoices
+        setInvoices(invoicesRes.data.map((inv): Invoice => ({
+          id: inv.id.toString(),
+          invoiceNumber: inv.invoice_number,
+          customer: inv.customer?.name || 'Unknown',
+          customerId: inv.customer_id.toString(),
+          salesOrderId: inv.sale_order_id?.toString(),
+          invoiceDate: inv.invoice_date,
+          dueDate: inv.due_date || inv.invoice_date,
+          lineItems: inv.lines?.map(line => ({
+            id: line.id?.toString() || '',
+            productId: line.product_id.toString(),
+            productName: line.description || 'Product ' + line.product_id,
+            quantity: line.quantity,
+            unitPrice: line.unit_price,
+            tax: line.tax_rate,
+            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
+          })) || [],
+          subtotal: inv.total_amount - inv.tax_amount,
+          tax: inv.tax_amount,
+          total: inv.total_amount,
+          paid: inv.amount_paid,
+          status: inv.status === 'paid' ? 'paid' : inv.amount_paid > 0 ? 'partial' : inv.status as InvoiceStatus,
+        })));
+        
+        // Map purchase orders
+        setPurchaseOrders(purchaseOrdersRes.data.map((po): PurchaseOrder => ({
+          id: po.id.toString(),
+          orderNumber: po.order_number,
+          vendor: po.vendor?.name || 'Unknown',
+          vendorId: po.vendor_id.toString(),
+          date: po.order_date,
+          lineItems: po.lines?.map(line => ({
+            id: line.id?.toString() || '',
+            productId: line.product_id.toString(),
+            productName: 'Product ' + line.product_id,
+            quantity: line.quantity,
+            unitPrice: line.unit_price,
+            tax: line.tax_rate,
+            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
+          })) || [],
+          subtotal: po.total_amount - po.tax_amount,
+          tax: po.tax_amount,
+          total: po.total_amount,
+          status: po.status as OrderStatus,
+        })));
+        
+        // Map vendor bills
+        setVendorBills(vendorBillsRes.data.map((bill): VendorBill => ({
+          id: bill.id.toString(),
+          billNumber: bill.bill_number,
+          vendor: bill.vendor?.name || 'Unknown',
+          vendorId: bill.vendor_id.toString(),
+          purchaseOrderId: bill.purchase_order_id?.toString(),
+          billDate: bill.bill_date,
+          dueDate: bill.due_date || bill.bill_date,
+          lineItems: bill.lines?.map(line => ({
+            id: line.id?.toString() || '',
+            productId: line.product_id.toString(),
+            productName: line.description || 'Product ' + line.product_id,
+            quantity: line.quantity,
+            unitPrice: line.unit_price,
+            tax: line.tax_rate,
+            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
+          })) || [],
+          subtotal: bill.total_amount - bill.tax_amount,
+          tax: bill.tax_amount,
+          total: bill.total_amount,
+          paid: bill.amount_paid,
+          status: bill.status === 'paid' ? 'paid' : bill.amount_paid > 0 ? 'partial' : bill.status as InvoiceStatus,
+        })));
+        
+        toast.success('Data loaded from backend successfully');
+      } catch (error: any) {
+        console.error('Error fetching data:', error);
+        toast.error('Failed to load data from backend: ' + (error.response?.data?.detail || error.message));
+        
+        // Initialize with minimal dummy data on error
+        if (products.length === 0) {
+          const fallbackProducts: AdminProduct[] = [
+            {
+              id: '1',
+              name: 'Cotton Shirt',
+              category: 'men',
+              type: 'shirts',
+              material: 'cotton',
+              colors: ['Blue', 'White', 'Black'],
+              stock: 50,
+              salesPrice: 1200,
+              salesTax: 18,
+              purchasePrice: 720,
+              purchaseTax: 12,
+              published: true,
+              status: 'confirmed',
+              description: 'Premium cotton shirt for formal wear',
+              images: ['https://placehold.co/600x800/e2e8f0/1e293b?text=Cotton+Shirt'],
+              price: 1200,
+            }
+          ];
+          setProducts(fallbackProducts);
+        }
+      } finally {
+        setLoading(false);
       }
     };
-
-    fetchProducts();
+    
+    fetchData();
   }, []);
 
   // --- 2. WEBSOCKET REAL-TIME SYNC ---
@@ -574,44 +525,356 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // --- CRUD FUNCTIONS ---
 
-  const addProduct = useCallback((product: Omit<AdminProduct, 'id'>) => {
-    const id = generateId();
-    setProducts(prev => [...prev, { ...product, id }]);
-    return id;
+  // Products
+  const addProduct = useCallback(async (product: Omit<AdminProduct, 'id'>) => {
+    try {
+      const res = await productsApi.create({
+        name: product.name,
+        description: product.description,
+        price: product.salesPrice,
+        current_stock: product.stock,
+        category: product.category,
+        product_type: 'storable',
+        image_url: product.images[0],
+      });
+      const newProduct = mapBackendProduct(res.data);
+      setProducts(prev => [...prev, newProduct]);
+      toast.success('Product added successfully');
+      return newProduct.id;
+    } catch (error: any) {
+      toast.error('Failed to add product: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
   }, []);
 
-  const updateProduct = useCallback((id: string, updates: Partial<AdminProduct>) => {
-    setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+  const updateProduct = useCallback(async (id: string, updates: Partial<AdminProduct>) => {
+    try {
+      await productsApi.update(parseInt(id), {
+        name: updates.name,
+        description: updates.description,
+        price: updates.salesPrice,
+        current_stock: updates.stock,
+        category: updates.category,
+        image_url: updates.images?.[0],
+      });
+      setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+      toast.success('Product updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update product: ' + (error.response?.data?.detail || error.message));
+    }
   }, []);
 
-  const deleteProduct = useCallback((id: string) => {
-    setProducts(prev => prev.filter(p => p.id !== id));
+  const deleteProduct = useCallback(async (id: string) => {
+    try {
+      await productsApi.delete(parseInt(id));
+      setProducts(prev => prev.filter(p => p.id !== id));
+      toast.success('Product deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete product: ' + (error.response?.data?.detail || error.message));
+    }
   }, []);
 
-  const addSalesOrder = (o: Omit<SalesOrder, 'id'>) => { const id = generateId(); setSalesOrders(p => [...p, {...o, id}]); return id; };
-  const updateSalesOrder = (id: string, o: Partial<SalesOrder>) => setSalesOrders(p => p.map(i => i.id === id ? {...i, ...o} : i));
+  // Sales Orders
+  const addSalesOrder = async (o: Omit<SalesOrder, 'id'>) => {
+    try {
+      const res = await salesOrdersApi.create({
+        customer_id: parseInt(o.customerId),
+        order_date: o.date,
+        lines: o.lineItems.map(item => ({
+          product_id: parseInt(item.productId),
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          tax_rate: item.tax,
+          discount: 0,
+        })),
+        notes: '',
+      });
+      const newOrder: SalesOrder = {
+        id: res.data.id.toString(),
+        orderNumber: res.data.order_number,
+        customer: o.customer,
+        customerId: o.customerId,
+        date: o.date,
+        lineItems: o.lineItems,
+        discount: o.discount,
+        subtotal: o.subtotal,
+        tax: o.tax,
+        total: o.total,
+        status: res.data.status as OrderStatus,
+      };
+      setSalesOrders(p => [...p, newOrder]);
+      toast.success('Sales order created successfully');
+      return newOrder.id;
+    } catch (error: any) {
+      toast.error('Failed to create sales order: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
+  };
   
-  const addInvoice = (i: Omit<Invoice, 'id'>) => { const id = generateId(); setInvoices(p => [...p, {...i, id}]); return id; };
-  const updateInvoice = (id: string, i: Partial<Invoice>) => setInvoices(p => p.map(x => x.id === id ? {...x, ...i} : x));
+  const updateSalesOrder = async (id: string, o: Partial<SalesOrder>) => {
+    try {
+      await salesOrdersApi.update(parseInt(id), {
+        status: o.status as any,
+      });
+      setSalesOrders(p => p.map(i => i.id === id ? {...i, ...o} : i));
+      toast.success('Sales order updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update sales order: ' + (error.response?.data?.detail || error.message));
+    }
+  };
   
-  const addPurchaseOrder = (o: Omit<PurchaseOrder, 'id'>) => { const id = generateId(); setPurchaseOrders(p => [...p, {...o, id}]); return id; };
-  const updatePurchaseOrder = (id: string, o: Partial<PurchaseOrder>) => setPurchaseOrders(p => p.map(i => i.id === id ? {...i, ...o} : i));
+  // Invoices
+  const addInvoice = async (i: Omit<Invoice, 'id'>) => {
+    try {
+      const res = await invoicesApi.create({
+        customer_id: parseInt(i.customerId),
+        sale_order_id: i.salesOrderId ? parseInt(i.salesOrderId) : undefined,
+        invoice_date: i.invoiceDate,
+        due_date: i.dueDate,
+        lines: i.lineItems.map(item => ({
+          product_id: parseInt(item.productId),
+          description: item.productName,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          tax_rate: item.tax,
+        })),
+        notes: '',
+      });
+      const newInvoice: Invoice = {
+        id: res.data.id.toString(),
+        invoiceNumber: res.data.invoice_number,
+        customer: i.customer,
+        customerId: i.customerId,
+        salesOrderId: i.salesOrderId,
+        invoiceDate: i.invoiceDate,
+        dueDate: i.dueDate,
+        lineItems: i.lineItems,
+        subtotal: i.subtotal,
+        tax: i.tax,
+        total: i.total,
+        paid: 0,
+        status: res.data.status as InvoiceStatus,
+      };
+      setInvoices(p => [...p, newInvoice]);
+      toast.success('Invoice created successfully');
+      return newInvoice.id;
+    } catch (error: any) {
+      toast.error('Failed to create invoice: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
+  };
   
-  const addVendorBill = (b: Omit<VendorBill, 'id'>) => { const id = generateId(); setVendorBills(p => [...p, {...b, id}]); return id; };
-  const updateVendorBill = (id: string, b: Partial<VendorBill>) => setVendorBills(p => p.map(i => i.id === id ? {...i, ...b} : i));
+  const updateInvoice = async (id: string, i: Partial<Invoice>) => {
+    try {
+      await invoicesApi.update(parseInt(id), {
+        status: i.status as any,
+        amount_paid: i.paid,
+      });
+      setInvoices(p => p.map(x => x.id === id ? {...x, ...i} : x));
+      toast.success('Invoice updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update invoice: ' + (error.response?.data?.detail || error.message));
+    }
+  };
   
+  // Purchase Orders
+  const addPurchaseOrder = async (o: Omit<PurchaseOrder, 'id'>) => {
+    try {
+      const res = await purchaseOrdersApi.create({
+        vendor_id: parseInt(o.vendorId),
+        order_date: o.date,
+        lines: o.lineItems.map(item => ({
+          product_id: parseInt(item.productId),
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          tax_rate: item.tax,
+        })),
+        notes: '',
+      });
+      const newOrder: PurchaseOrder = {
+        id: res.data.id.toString(),
+        orderNumber: res.data.order_number,
+        vendor: o.vendor,
+        vendorId: o.vendorId,
+        date: o.date,
+        lineItems: o.lineItems,
+        subtotal: o.subtotal,
+        tax: o.tax,
+        total: o.total,
+        status: res.data.status as OrderStatus,
+      };
+      setPurchaseOrders(p => [...p, newOrder]);
+      toast.success('Purchase order created successfully');
+      return newOrder.id;
+    } catch (error: any) {
+      toast.error('Failed to create purchase order: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
+  };
+  
+  const updatePurchaseOrder = async (id: string, o: Partial<PurchaseOrder>) => {
+    try {
+      await purchaseOrdersApi.update(parseInt(id), {
+        status: o.status as any,
+      });
+      setPurchaseOrders(p => p.map(i => i.id === id ? {...i, ...o} : i));
+      toast.success('Purchase order updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update purchase order: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+  
+  // Vendor Bills
+  const addVendorBill = async (b: Omit<VendorBill, 'id'>) => {
+    try {
+      const res = await vendorBillsApi.create({
+        vendor_id: parseInt(b.vendorId),
+        purchase_order_id: b.purchaseOrderId ? parseInt(b.purchaseOrderId) : undefined,
+        bill_date: b.billDate,
+        due_date: b.dueDate,
+        lines: b.lineItems.map(item => ({
+          product_id: parseInt(item.productId),
+          description: item.productName,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          tax_rate: item.tax,
+        })),
+        notes: '',
+      });
+      const newBill: VendorBill = {
+        id: res.data.id.toString(),
+        billNumber: res.data.bill_number,
+        vendor: b.vendor,
+        vendorId: b.vendorId,
+        purchaseOrderId: b.purchaseOrderId,
+        billDate: b.billDate,
+        dueDate: b.dueDate,
+        lineItems: b.lineItems,
+        subtotal: b.subtotal,
+        tax: b.tax,
+        total: b.total,
+        paid: 0,
+        status: res.data.status as InvoiceStatus,
+      };
+      setVendorBills(p => [...p, newBill]);
+      toast.success('Vendor bill created successfully');
+      return newBill.id;
+    } catch (error: any) {
+      toast.error('Failed to create vendor bill: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
+  };
+  
+  const updateVendorBill = async (id: string, b: Partial<VendorBill>) => {
+    try {
+      await vendorBillsApi.update(parseInt(id), {
+        status: b.status as any,
+        amount_paid: b.paid,
+      });
+      setVendorBills(p => p.map(i => i.id === id ? {...i, ...b} : i));
+      toast.success('Vendor bill updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update vendor bill: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+  
+  // Users (no backend API yet - keep local)
   const addUser = (u: Omit<User, 'id'>) => { const id = generateId(); setUsers(p => [...p, {...u, id}]); return id; };
   const updateUser = (id: string, u: Partial<User>) => setUsers(p => p.map(i => i.id === id ? {...i, ...u} : i));
   const deleteUser = (id: string) => setUsers(p => p.filter(i => i.id !== id));
   
-  const addContact = (c: Omit<Contact, 'id'>) => { const id = generateId(); setContacts(p => [...p, {...c, id}]); return id; };
-  const updateContact = (id: string, c: Partial<Contact>) => setContacts(p => p.map(i => i.id === id ? {...i, ...c} : i));
-  const deleteContact = (id: string) => setContacts(p => p.filter(i => i.id !== id));
+  // Contacts
+  const addContact = async (c: Omit<Contact, 'id'>) => {
+    try {
+      const res = await contactsApi.create({
+        name: c.name || '',
+        email: c.email || '',
+        phone: c.phone,
+        address: c.address,
+        contact_type: c.type,
+      });
+      const newContact = mapBackendContact(res.data);
+      setContacts(p => [...p, newContact]);
+      toast.success('Contact added successfully');
+      return newContact.id;
+    } catch (error: any) {
+      toast.error('Failed to add contact: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
+  };
   
-  const addPaymentTerm = (t: Omit<PaymentTerm, 'id'>) => { const id = generateId(); setPaymentTerms(p => [...p, {...t, id}]); return id; };
-  const updatePaymentTerm = (id: string, t: Partial<PaymentTerm>) => setPaymentTerms(p => p.map(i => i.id === id ? {...i, ...t} : i));
-  const deletePaymentTerm = (id: string) => setPaymentTerms(p => p.filter(i => i.id !== id));
+  const updateContact = async (id: string, c: Partial<Contact>) => {
+    try {
+      await contactsApi.update(parseInt(id), {
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        contact_type: c.type as any,
+      });
+      setContacts(p => p.map(i => i.id === id ? {...i, ...c} : i));
+      toast.success('Contact updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update contact: ' + (error.response?.data?.detail || error.message));
+    }
+  };
   
+  const deleteContact = async (id: string) => {
+    try {
+      await contactsApi.delete(parseInt(id));
+      setContacts(p => p.filter(i => i.id !== id));
+      toast.success('Contact deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete contact: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+  
+  // Payment Terms
+  const addPaymentTerm = async (t: Omit<PaymentTerm, 'id'>) => {
+    try {
+      const res = await paymentTermsApi.create({
+        name: t.name,
+        days: 30,
+        discount_percentage: 0,
+        early_payment_days: t.discountDays || 0,
+        early_payment_discount: t.discountPercentage || 0,
+        description: '',
+      });
+      const newTerm = mapBackendPaymentTerm(res.data);
+      setPaymentTerms(p => [...p, newTerm]);
+      toast.success('Payment term added successfully');
+      return newTerm.id;
+    } catch (error: any) {
+      toast.error('Failed to add payment term: ' + (error.response?.data?.detail || error.message));
+      return '';
+    }
+  };
+  
+  const updatePaymentTerm = async (id: string, t: Partial<PaymentTerm>) => {
+    try {
+      await paymentTermsApi.update(parseInt(id), {
+        name: t.name,
+        early_payment_days: t.discountDays,
+        early_payment_discount: t.discountPercentage,
+      });
+      setPaymentTerms(p => p.map(i => i.id === id ? {...i, ...t} : i));
+      toast.success('Payment term updated successfully');
+    } catch (error: any) {
+      toast.error('Failed to update payment term: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+  
+  const deletePaymentTerm = async (id: string) => {
+    try {
+      await paymentTermsApi.delete(parseInt(id));
+      setPaymentTerms(p => p.filter(i => i.id !== id));
+      toast.success('Payment term deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete payment term: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+  
+  // Offers & Coupons (no backend API yet - keep local)
   const addOffer = (o: Omit<Offer, 'id'>) => { const id = generateId(); setOffers(p => [...p, {...o, id}]); return id; };
   const updateOffer = (id: string, o: Partial<Offer>) => setOffers(p => p.map(i => i.id === id ? {...i, ...o} : i));
   const deleteOffer = (id: string) => setOffers(p => p.filter(i => i.id !== id));

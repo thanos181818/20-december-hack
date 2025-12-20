@@ -7,13 +7,12 @@ from pydantic import BaseModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import select
-from models import Product
 
 # Internal imports
-from db import get_session
-from models import Product, SaleOrder, SaleOrderLine, Invoice, User
-from auth import get_current_user
-from websocket_manager import manager
+from backend.db import get_session
+from backend.models import Product, SaleOrder, SaleOrderLine, Invoice, User
+from backend.auth import get_current_user
+from backend.websocket_manager import manager
 
 # --- Pydantic Schemas (Data Validation) ---
 class OrderItemSchema(BaseModel):
@@ -54,8 +53,10 @@ async def place_order(
 
         new_order = SaleOrder(
             order_number=order_num,
-            contact_id=current_user.contact_id, 
+            customer_id=current_user.contact_id,
             total_amount=0,
+            tax_amount=0,
+            discount_amount=0,
             status="confirmed"
         )
         session.add(new_order)
@@ -93,11 +94,16 @@ async def place_order(
 
         # --- 3. Auto Invoice Logic ---
         if order_data.auto_invoice:
+            from datetime import date
             invoice = Invoice(
                 invoice_number=f"INV-{order_num}",
-                order_id=new_order.id,
-                amount_due=total_amount,
-                is_paid=False 
+                sale_order_id=new_order.id,
+                customer_id=new_order.customer_id,
+                invoice_date=date.today(),
+                total_amount=total_amount,
+                tax_amount=0,
+                amount_paid=0,
+                status="draft"
             )
             session.add(invoice)
 
