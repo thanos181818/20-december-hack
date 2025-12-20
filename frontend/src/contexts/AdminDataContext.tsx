@@ -225,6 +225,18 @@ const generateOrderNumber = (prefix: string, counter: number): string => {
   return `${prefix}-${String(counter).padStart(3, '0')}`;
 };
 
+// Helper to generate UUIDs safely in non-secure contexts (HTTP)
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  // Fallback for HTTP/IP access
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load from localStorage or initialize
   const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
@@ -325,7 +337,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Products
   const addProduct = useCallback((product: Omit<AdminProduct, 'id'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const newProduct: AdminProduct = {
       ...product,
       id,
@@ -349,7 +361,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Sales Orders
   const addSalesOrder = useCallback((order: Omit<SalesOrder, 'id' | 'orderNumber'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const orderNumber = generateOrderNumber('SO', salesOrderCounter++);
     const newOrder: SalesOrder = { ...order, id, orderNumber };
     setSalesOrders(prev => [...prev, newOrder]);
@@ -362,7 +374,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Invoices
   const addInvoice = useCallback((invoice: Omit<Invoice, 'id' | 'invoiceNumber'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const invoiceNumber = generateOrderNumber('INV', invoiceCounter++);
     const newInvoice: Invoice = { ...invoice, id, invoiceNumber };
     setInvoices(prev => [...prev, newInvoice]);
@@ -375,7 +387,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Purchase Orders
   const addPurchaseOrder = useCallback((order: Omit<PurchaseOrder, 'id' | 'orderNumber'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const orderNumber = generateOrderNumber('PO', purchaseOrderCounter++);
     const newOrder: PurchaseOrder = { ...order, id, orderNumber };
     setPurchaseOrders(prev => [...prev, newOrder]);
@@ -388,7 +400,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Vendor Bills
   const addVendorBill = useCallback((bill: Omit<VendorBill, 'id' | 'billNumber'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     const billNumber = generateOrderNumber('BILL', vendorBillCounter++);
     const newBill: VendorBill = { ...bill, id, billNumber };
     setVendorBills(prev => [...prev, newBill]);
@@ -401,7 +413,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Users
   const addUser = useCallback((user: Omit<User, 'id'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setUsers(prev => [...prev, { ...user, id }]);
     return id;
   }, []);
@@ -416,7 +428,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Contacts
   const addContact = useCallback((contact: Omit<Contact, 'id'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setContacts(prev => [...prev, { ...contact, id }]);
     return id;
   }, []);
@@ -431,7 +443,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Payment Terms
   const addPaymentTerm = useCallback((term: Omit<PaymentTerm, 'id'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setPaymentTerms(prev => [...prev, { ...term, id }]);
     return id;
   }, []);
@@ -446,7 +458,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Offers
   const addOffer = useCallback((offer: Omit<Offer, 'id'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setOffers(prev => [...prev, { ...offer, id }]);
     return id;
   }, []);
@@ -461,7 +473,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Coupons
   const addCoupon = useCallback((coupon: Omit<Coupon, 'id'>): string => {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
     setCoupons(prev => [...prev, { ...coupon, id }]);
     return id;
   }, []);
@@ -528,4 +540,3 @@ export const useAdminData = () => {
   }
   return context;
 };
-
