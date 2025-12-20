@@ -1,11 +1,40 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Filter, X, ChevronDown } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
-import { products, productTypes, materials } from '@/data/products';
+import { productTypes, materials } from '@/data/products';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
+
+// Define the shape of data coming from Python
+interface BackendProduct {
+  id: number;
+  name: string;
+  price: number;
+  current_stock: number;
+  version_id: number;
+}
+
+// FIXED: Define strict types to match ProductCard expectations
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  tax: number;
+  category: 'men' | 'women' | 'children';
+  type: 'shirts' | 'pants' | 'kurtas' | 'dresses' | 'jackets';
+  material: 'cotton' | 'silk' | 'linen' | 'wool' | 'polyester';
+  colors: string[];
+  sizes: string[];
+  stock: number;
+  images: string[];
+  featured: boolean;
+  published: boolean;
+}
 
 const priceRanges = [
   { label: 'Under ₹1,000', min: 0, max: 1000 },
@@ -14,9 +43,53 @@ const priceRanges = [
   { label: 'Above ₹5,000', min: 5000, max: Infinity },
 ];
 
+// Constants for cyclic assignment
+const CATEGORIES = ['men', 'women', 'children'] as const;
+
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch from Backend
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await api.get<BackendProduct[]>('/orders/products');
+        
+        // Map backend data to frontend UI structure
+        const mappedProducts: Product[] = res.data.map((p) => ({
+          id: p.id.toString(),
+          name: p.name,
+          description: 'Premium quality apparel designed for comfort and style.',
+          price: p.price,
+          tax: p.price * 0.18, 
+          stock: p.current_stock,
+          images: [`https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(p.name)}`],
+          
+          // FIXED: Explicit casting to specific union types
+          category: CATEGORIES[p.id % 3], 
+          type: 'shirts' as const, 
+          material: 'cotton' as const,
+          
+          colors: ['White', 'Blue', 'Black'],
+          sizes: ['S', 'M', 'L', 'XL'],
+          featured: p.id % 2 === 0,
+          published: true
+        }));
+
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error("Failed to fetch products", error);
+        toast.error("Could not load products from server");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   const categoryParam = searchParams.get('category');
   const typeParam = searchParams.get('type');
@@ -35,7 +108,7 @@ const Products = () => {
       }
       return true;
     });
-  }, [categoryParam, typeParam, materialParam, priceParam]);
+  }, [products, categoryParam, typeParam, materialParam, priceParam]);
 
   const updateFilter = (key: string, value: string | null) => {
     const newParams = new URLSearchParams(searchParams);
@@ -57,10 +130,6 @@ const Products = () => {
     <>
       <Helmet>
         <title>Shop All Products | ApparelDesk</title>
-        <meta 
-          name="description" 
-          content="Browse our complete collection of premium clothing. Filter by category, type, material, and price to find your perfect style." 
-        />
       </Helmet>
       <Layout>
         <div className="bg-muted/30 py-8 lg:py-12">
@@ -69,7 +138,7 @@ const Products = () => {
               {categoryParam ? `${categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1)}'s Collection` : 'All Products'}
             </h1>
             <p className="text-muted-foreground mt-2">
-              {filteredProducts.length} products found
+              {loading ? 'Loading...' : `${filteredProducts.length} products found`}
             </p>
           </div>
         </div>
@@ -92,7 +161,7 @@ const Products = () => {
                 <div className="mb-6">
                   <h3 className="font-medium text-sm text-foreground mb-3">Category</h3>
                   <div className="space-y-2">
-                    {['men', 'women', 'children'].map(cat => (
+                    {CATEGORIES.map(cat => (
                       <button
                         key={cat}
                         onClick={() => updateFilter('category', categoryParam === cat ? null : cat)}
@@ -172,7 +241,6 @@ const Products = () => {
 
             {/* Products Grid */}
             <div className="flex-1">
-              {/* Mobile Filter Toggle */}
               <div className="lg:hidden mb-6 flex gap-4">
                 <Button
                   variant="outline"
@@ -184,7 +252,6 @@ const Products = () => {
                 </Button>
               </div>
 
-              {/* Active Filters */}
               {hasActiveFilters && (
                 <div className="flex flex-wrap gap-2 mb-6">
                   {categoryParam && (
@@ -222,7 +289,13 @@ const Products = () => {
                 </div>
               )}
 
-              {filteredProducts.length > 0 ? (
+              {loading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                  {[1, 2, 3, 4, 5, 6].map((n) => (
+                    <div key={n} className="h-[400px] bg-muted/50 animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                   {filteredProducts.map((product, index) => (
                     <div

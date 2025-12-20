@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
+import axios from 'axios';
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -28,15 +30,52 @@ const Checkout = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isAuthenticated) {
+      toast.error("Please login to complete your purchase");
+      navigate('/login');
+      return;
+    }
+
     setIsProcessing(true);
 
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // 1. Prepare Payload for Backend
+      // The backend expects: { items: [{ product_id: int, quantity: int }], auto_invoice: bool }
+      const orderPayload = {
+        auto_invoice: true,
+        items: items.map(item => ({
+          // Ensure we parse the ID as integer (frontend IDs might be strings)
+          product_id: parseInt(item.id.split('-')[0]), 
+          quantity: item.quantity
+        }))
+      };
 
-    toast.success('Order placed successfully!');
-    clearCart();
-    navigate('/dashboard');
-    setIsProcessing(false);
+      // 2. Call API (Transactional Endpoint)
+      await api.post('/orders/', orderPayload);
+
+      toast.success('Order placed successfully! Inventory updated.');
+      clearCart();
+      navigate('/dashboard');
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      
+      // Handle Specific Backend Errors
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const msg = error.response?.data?.detail || "Payment failed";
+
+        if (status === 409) {
+          toast.error("Stock changed while you were buying. Please retry.");
+        } else if (status === 400) {
+          toast.error(`Order failed: ${msg}`);
+        } else {
+          toast.error("Something went wrong. Please try again.");
+        }
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (items.length === 0) {
@@ -75,6 +114,7 @@ const Checkout = () => {
                         defaultValue={user?.email || ''}
                         placeholder="your@email.com"
                         required
+                        disabled
                       />
                     </div>
                     <div>
@@ -210,7 +250,7 @@ const Checkout = () => {
                     className="w-full mt-6"
                     disabled={isProcessing}
                   >
-                    {isProcessing ? 'Processing...' : `Pay ${formatPrice(total)}`}
+                    {isProcessing ? 'Processing Transaction...' : `Pay ${formatPrice(total)}`}
                   </Button>
                 </div>
               </div>
