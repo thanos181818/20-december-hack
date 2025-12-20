@@ -1,0 +1,184 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 30 25% 97%;
+    --foreground: 25 30% 12%;
+
+    --card: 30 20% 99%;
+    --card-foreground: 25 30% 12%;
+
+    --popover: 30 20% 99%;
+    --popover-foreground: 25 30% 12%;
+
+    --primary: 25 45% 28%;
+    --primary-foreground: 30 25% 97%;
+
+    --secondary: 30 30% 90%;
+    --secondary-foreground: 25 30% 20%;
+
+    --muted: 30 20% 94%;
+    --muted-foreground: 25 15% 45%;
+
+    --accent: 25 35% 45%;
+    --accent-foreground: 30 25% 97%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 20% 88%;
+    --input: 30 20% 88%;
+    --ring: 25 45% 28%;
+
+    --radius: 0.5rem;
+
+    /* Custom tokens */
+    --brown-50: 30 30% 96%;
+    --brown-100: 30 25% 92%;
+    --brown-200: 28 22% 82%;
+    --brown-300: 26 20% 68%;
+    --brown-400: 25 25% 50%;
+    --brown-500: 25 35% 40%;
+    --brown-600: 25 45% 28%;
+    --brown-700: 24 50% 22%;
+    --brown-800: 22 55% 16%;
+    --brown-900: 20 60% 10%;
+
+    --cream: 35 40% 95%;
+    --tan: 30 25% 75%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(25 45% 28% / 0.9), hsl(24 50% 22% / 0.95));
+    --gradient-card: linear-gradient(180deg, hsl(30 20% 99%), hsl(30 25% 97%));
+    --gradient-overlay: linear-gradient(to top, hsl(25 30% 12% / 0.7), transparent);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px hsl(25 30% 12% / 0.06);
+    --shadow-md: 0 4px 16px hsl(25 30% 12% / 0.08);
+    --shadow-lg: 0 8px 32px hsl(25 30% 12% / 0.12);
+    --shadow-glow: 0 0 40px hsl(25 45% 28% / 0.15);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    --sidebar-background: 30 25% 97%;
+    --sidebar-foreground: 25 30% 12%;
+    --sidebar-primary: 25 45% 28%;
+    --sidebar-primary-foreground: 30 25% 97%;
+    --sidebar-accent: 30 30% 90%;
+    --sidebar-accent-foreground: 25 30% 20%;
+    --sidebar-border: 30 20% 88%;
+    --sidebar-ring: 25 45% 28%;
+  }
+
+  .dark {
+    --background: 22 30% 8%;
+    --foreground: 30 20% 95%;
+
+    --card: 22 25% 12%;
+    --card-foreground: 30 20% 95%;
+
+    --popover: 22 25% 12%;
+    --popover-foreground: 30 20% 95%;
+
+    --primary: 30 35% 65%;
+    --primary-foreground: 22 30% 8%;
+
+    --secondary: 22 20% 18%;
+    --secondary-foreground: 30 20% 90%;
+
+    --muted: 22 20% 18%;
+    --muted-foreground: 30 15% 60%;
+
+    --accent: 30 30% 55%;
+    --accent-foreground: 22 30% 8%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 22 20% 20%;
+    --input: 22 20% 20%;
+    --ring: 30 35% 65%;
+
+    --sidebar-background: 22 25% 10%;
+    --sidebar-foreground: 30 20% 95%;
+    --sidebar-primary: 30 35% 65%;
+    --sidebar-primary-foreground: 22 30% 8%;
+    --sidebar-accent: 22 20% 18%;
+    --sidebar-accent-foreground: 30 20% 90%;
+    --sidebar-border: 22 20% 20%;
+    --sidebar-ring: 30 35% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Playfair Display', serif;
+  }
+
+  .font-body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn var(--transition-base) ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp var(--transition-base) ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn var(--transition-fast) ease-out;
+  }
+
+  .hover-lift {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
