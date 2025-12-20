@@ -10,6 +10,7 @@ import {
   Eye,
   Archive,
   Check,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -61,11 +62,22 @@ const ProductsAdmin = () => {
       console.error('Error updating product:', error);
     }
   };
+
   const handleArchive = async (productId: string) => {
     try {
       await updateProduct(productId, { status: 'archived', published: false });
+      toast.success('Product archived');
     } catch (error) {
       console.error('Error archiving product:', error);
+    }
+  };
+
+  const handleRestore = async (productId: string) => {
+    try {
+      await updateProduct(productId, { status: 'confirmed', published: false });
+      toast.success('Product restored to confirmed');
+    } catch (error) {
+      console.error('Error restoring product:', error);
     }
   };
 
@@ -213,7 +225,7 @@ const ProductsAdmin = () => {
                               Edit
                             </DropdownMenuItem>
                             {product.status === 'confirmed' && (
-                              <DropdownMenuItem onClick={() => handlePublish(product.id)}>
+                              <DropdownMenuItem onClick={() => handleTogglePublished(product.id)}>
                                 <Check className="h-4 w-4 mr-2" />
                                 {product.published ? 'Unpublish' : 'Publish'}
                               </DropdownMenuItem>
@@ -224,6 +236,15 @@ const ProductsAdmin = () => {
                                 <DropdownMenuItem onClick={() => handleArchive(product.id)}>
                                   <Archive className="h-4 w-4 mr-2" />
                                   Archive
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {product.status === 'archived' && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => handleRestore(product.id)}>
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Restore to Confirmed
                                 </DropdownMenuItem>
                               </>
                             )}
