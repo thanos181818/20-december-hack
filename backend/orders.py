@@ -211,6 +211,8 @@ async def get_invoice_detail(
     session: AsyncSession = Depends(get_session)
 ):
     """Get a specific invoice by ID."""
+    from backend.models import Contact, InvoiceLine
+    
     invoice = await session.get(Invoice, invoice_id)
     
     if not invoice:
@@ -221,8 +223,27 @@ async def get_invoice_detail(
         raise HTTPException(status_code=403, detail="Access denied")
     
     # Get customer info
-    from backend.models import Contact
     customer = await session.get(Contact, invoice.customer_id)
+    
+    # Get invoice lines
+    result = await session.execute(
+        select(InvoiceLine).where(InvoiceLine.invoice_id == invoice_id)
+    )
+    lines = result.scalars().all()
+    
+    # Build items list with product details
+    items = []
+    for line in lines:
+        product = await session.get(Product, line.product_id)
+        items.append({
+            "product_id": line.product_id,
+            "product_name": product.name if product else line.description or "Product",
+            "description": line.description or (product.name if product else "Product"),
+            "quantity": line.quantity,
+            "unit_price": line.unit_price,
+            "tax_rate": line.tax_rate,
+            "total": line.quantity * line.unit_price,
+        })
     
     return {
         "id": invoice.id,
@@ -238,6 +259,7 @@ async def get_invoice_detail(
         "customer_email": customer.email if customer else "",
         "customer_phone": customer.phone if customer else "",
         "customer_address": customer.address if customer else "",
+        "items": items,
     }
 
 
@@ -267,6 +289,12 @@ async def get_order_detail(
     from backend.models import Contact
     customer = await session.get(Contact, order.customer_id)
     
+    # Get associated invoice
+    invoice_result = await session.execute(
+        select(Invoice).where(Invoice.sale_order_id == order_id)
+    )
+    invoice = invoice_result.scalars().first()
+    
     items = []
     for line in lines:
         product = await session.get(Product, line.product_id)
@@ -290,5 +318,6 @@ async def get_order_detail(
         "customer_email": customer.email if customer else "",
         "customer_phone": customer.phone if customer else "",
         "customer_address": customer.address if customer else "",
+        "invoice_id": invoice.id if invoice else None,
         "items": items,
     }

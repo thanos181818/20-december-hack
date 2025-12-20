@@ -24,7 +24,10 @@ interface OrderData {
   tax: number;
   discount: number;
   customerName: string;
+  customerEmail: string;
+  customerPhone: string;
   customerAddress: string;
+  invoiceId: string | null;
   items: OrderItem[];
 }
 
@@ -49,7 +52,10 @@ const OrderDetail = () => {
           tax: data.total_amount * 0.15,
           discount: data.discount_amount || 0,
           customerName: data.customer_name || 'Customer',
-          customerAddress: data.customer_address || 'Address not provided',
+          customerEmail: data.customer_email || '',
+          customerPhone: data.customer_phone || '',
+          customerAddress: data.customer_address || '',
+          invoiceId: data.invoice_id?.toString() || null,
           items: data.items || [],
         });
       } catch (error) {
@@ -209,11 +215,20 @@ const OrderDetail = () => {
               {/* Customer Info */}
               <div className="bg-card rounded-lg shadow-soft p-6">
                 <h2 className="font-display text-lg font-semibold mb-4">Customer Information</h2>
-                <div className="text-foreground">
+                <div className="text-foreground space-y-2">
                   <p className="font-medium">{order.customerName}</p>
-                  <p className="text-muted-foreground mt-1">
-                    {order.customerAddress}
-                  </p>
+                  {order.customerEmail && (
+                    <p className="text-muted-foreground">{order.customerEmail}</p>
+                  )}
+                  {order.customerPhone && (
+                    <p className="text-muted-foreground">{order.customerPhone}</p>
+                  )}
+                  {order.customerAddress && (
+                    <p className="text-muted-foreground">{order.customerAddress}</p>
+                  )}
+                  {!order.customerAddress && !order.customerPhone && (
+                    <p className="text-muted-foreground italic">Update your profile to add address and phone</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -248,11 +263,13 @@ const OrderDetail = () => {
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  <Link to={`/invoice/${order.id}`}>
-                    <Button variant="outline" className="w-full">
-                      View Invoice
-                    </Button>
-                  </Link>
+                  {order.invoiceId && (
+                    <Link to={`/invoice/${order.invoiceId}`}>
+                      <Button variant="outline" className="w-full">
+                        View Invoice
+                      </Button>
+                    </Link>
+                  )}
                   <Link to="/products">
                     <Button variant="ghost" className="w-full">
                       Continue Shopping

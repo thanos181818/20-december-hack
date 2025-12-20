@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X, Search, Shield } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
@@ -51,10 +51,6 @@ const Navbar = () => {
 
           {/* Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
-            <Button variant="ghost" size="icon" className="hidden lg:flex">
-              <Search className="h-5 w-5" />
-            </Button>
-
             {isAuthenticated ? (
               <div className="hidden lg:flex items-center gap-4">
                 {isAdmin ? (

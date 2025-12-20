@@ -5,6 +5,7 @@ import { ArrowLeft, Download, FileText, Printer } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { jsPDF } from 'jspdf';
 
 interface InvoiceData {
   id: string;
@@ -20,14 +21,12 @@ interface InvoiceData {
   billingAddress: {
     name: string;
     address: string;
-    city: string;
-    state: string;
-    pincode: string;
     email: string;
     phone: string;
   };
   items: {
     productId: string;
+    productName: string;
     description: string;
     quantity: number;
     price: number;
@@ -47,6 +46,10 @@ const InvoiceView = () => {
         const res = await api.get(`/orders/invoice/${id}`);
         const data = res.data;
         
+        // Calculate subtotal and tax from items or use backend values
+        const itemsTotal = data.items?.reduce((sum: number, item: any) => sum + (item.unit_price * item.quantity), 0) || data.total_amount;
+        const taxAmount = data.tax_amount || 0;
+        
         setInvoice({
           id: data.id.toString(),
           invoiceNumber: data.invoice_number,
@@ -54,28 +57,24 @@ const InvoiceView = () => {
           date: data.invoice_date,
           dueDate: data.due_date || data.invoice_date,
           status: data.status.charAt(0).toUpperCase() + data.status.slice(1),
-          subtotal: data.total_amount * 0.85,
-          tax: data.total_amount * 0.15,
+          subtotal: itemsTotal,
+          tax: taxAmount,
           discount: 0,
           total: data.total_amount,
           billingAddress: {
             name: data.customer_name || 'Customer',
             address: data.customer_address || 'Address not provided',
-            city: 'City',
-            state: 'State',
-            pincode: '000000',
             email: data.customer_email || '',
             phone: data.customer_phone || '',
           },
-          items: data.items || [
-            {
-              productId: '1',
-              description: 'Order Items',
-              quantity: 1,
-              price: data.total_amount * 0.85,
-              tax: data.total_amount * 0.15,
-            }
-          ],
+          items: data.items?.map((item: any) => ({
+            productId: item.product_id.toString(),
+            productName: item.product_name || item.description,
+            description: item.description || item.product_name,
+            quantity: item.quantity,
+            price: item.unit_price,
+            tax: item.tax_rate || 0,
+          })) || [],
         });
       } catch (error) {
         console.error('Failed to fetch invoice', error);
@@ -93,15 +92,12 @@ const InvoiceView = () => {
           total: 2949,
           billingAddress: {
             name: 'Customer',
-            address: 'Address',
-            city: 'City',
-            state: 'State',
-            pincode: '000000',
+            address: 'Address not provided',
             email: 'customer@email.com',
             phone: '+91 98765 43210',
           },
           items: [
-            { productId: '1', description: 'Product Item', quantity: 1, price: 2499, tax: 450 },
+            { productId: '1', productName: 'Product Item', description: 'Product Item', quantity: 1, price: 2499, tax: 0 },
           ],
         });
       } finally {
@@ -126,9 +122,132 @@ const InvoiceView = () => {
     window.print();
   };
 
+  // Simple price formatter for PDF (no special characters)
+  const formatPriceForPdf = (price: number) => {
+    return 'Rs. ' + price.toLocaleString('en-IN');
+  };
+
   const handleDownload = () => {
-    // In a real app, this would generate a PDF
-    alert('PDF download would be triggered here. In production, use a library like jsPDF.');
+    if (!invoice) return;
+    
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(79, 70, 229); // Primary color
+    doc.text('ApparelDesk', 20, 25);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('123 Fashion Street', 20, 32);
+    doc.text('Mumbai, Maharashtra 400001', 20, 37);
+    doc.text('India', 20, 42);
+    
+    // Invoice Title
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('INVOICE', pageWidth - 20, 25, { align: 'right' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Invoice #: ' + invoice.invoiceNumber, pageWidth - 20, 32, { align: 'right' });
+    doc.text('Date: ' + new Date(invoice.date).toLocaleDateString('en-IN'), pageWidth - 20, 37, { align: 'right' });
+    doc.text('Status: ' + invoice.status, pageWidth - 20, 42, { align: 'right' });
+    
+    // Divider
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 50, pageWidth - 20, 50);
+    
+    // Bill To
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('BILL TO', 20, 60);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(invoice.billingAddress.name, 20, 68);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    let yPos = 74;
+    if (invoice.billingAddress.address && invoice.billingAddress.address !== 'Address not provided') {
+      doc.text(invoice.billingAddress.address, 20, yPos);
+      yPos += 5;
+    }
+    if (invoice.billingAddress.email) {
+      doc.text(invoice.billingAddress.email, 20, yPos);
+      yPos += 5;
+    }
+    if (invoice.billingAddress.phone) {
+      doc.text(invoice.billingAddress.phone, 20, yPos);
+      yPos += 5;
+    }
+    
+    // Items Table Header
+    yPos = 100;
+    doc.setFillColor(245, 245, 245);
+    doc.rect(20, yPos - 6, pageWidth - 40, 10, 'F');
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('ITEM', 22, yPos);
+    doc.text('QTY', 100, yPos);
+    doc.text('PRICE', 120, yPos);
+    doc.text('AMOUNT', pageWidth - 22, yPos, { align: 'right' });
+    
+    // Items
+    yPos += 12;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    
+    invoice.items.forEach((item) => {
+      doc.setFontSize(10);
+      const itemName = (item.productName || item.description || 'Product').substring(0, 40);
+      doc.text(itemName, 22, yPos);
+      doc.text(item.quantity.toString(), 100, yPos);
+      doc.text(formatPriceForPdf(item.price), 120, yPos);
+      doc.text(formatPriceForPdf(item.price * item.quantity), pageWidth - 22, yPos, { align: 'right' });
+      yPos += 8;
+    });
+    
+    // Totals
+    yPos += 10;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(pageWidth - 80, yPos, pageWidth - 20, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.text('Subtotal:', pageWidth - 80, yPos);
+    doc.text(formatPriceForPdf(invoice.subtotal), pageWidth - 22, yPos, { align: 'right' });
+    yPos += 7;
+    
+    doc.text('Tax:', pageWidth - 80, yPos);
+    doc.text(formatPriceForPdf(invoice.tax), pageWidth - 22, yPos, { align: 'right' });
+    yPos += 10;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Total:', pageWidth - 80, yPos);
+    doc.setTextColor(79, 70, 229);
+    doc.text(formatPriceForPdf(invoice.total), pageWidth - 22, yPos, { align: 'right' });
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Thank you for shopping with ApparelDesk!', pageWidth / 2, 270, { align: 'center' });
+    doc.text('For any questions, contact us at support@appareldesk.com', pageWidth / 2, 276, { align: 'center' });
+    
+    // Save PDF
+    doc.save('Invoice-' + invoice.invoiceNumber + '.pdf');
   };
 
   if (loading) {
@@ -233,12 +352,20 @@ const InvoiceView = () => {
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Bill To</h3>
                 <div className="text-foreground">
                   <p className="font-medium">{invoice.billingAddress.name}</p>
-                  <p className="text-muted-foreground mt-1">
-                    {invoice.billingAddress.address}<br />
-                    {invoice.billingAddress.city}, {invoice.billingAddress.state} {invoice.billingAddress.pincode}<br />
-                    {invoice.billingAddress.email}<br />
-                    {invoice.billingAddress.phone}
-                  </p>
+                  <div className="text-muted-foreground mt-1 space-y-0.5">
+                    {invoice.billingAddress.address && invoice.billingAddress.address !== 'Address not provided' && (
+                      <p>{invoice.billingAddress.address}</p>
+                    )}
+                    {invoice.billingAddress.email && (
+                      <p>{invoice.billingAddress.email}</p>
+                    )}
+                    {invoice.billingAddress.phone && (
+                      <p>{invoice.billingAddress.phone}</p>
+                    )}
+                    {!invoice.billingAddress.address && !invoice.billingAddress.phone && (
+                      <p className="italic">Contact details not provided</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -258,11 +385,11 @@ const InvoiceView = () => {
                     {invoice.items.map((item, index) => (
                       <tr key={index}>
                         <td className="py-4">
-                          <div className="font-medium text-foreground">{item.description}</div>
+                          <div className="font-medium text-foreground">{item.productName || item.description}</div>
                         </td>
                         <td className="py-4 text-center text-muted-foreground">{item.quantity}</td>
                         <td className="py-4 text-right text-muted-foreground">{formatPrice(item.price)}</td>
-                        <td className="py-4 text-right text-muted-foreground">{formatPrice(item.tax)}</td>
+                        <td className="py-4 text-right text-muted-foreground">{formatPrice(item.tax * item.quantity)}</td>
                         <td className="py-4 text-right font-medium text-foreground">
                           {formatPrice((item.price + item.tax) * item.quantity)}
                         </td>

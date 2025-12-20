@@ -65,16 +65,28 @@ const Dashboard = () => {
     phone: '',
     address: '',
   });
+  const [savingProfile, setSavingProfile] = useState(false);
 
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
     confirm: '',
   });
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        // Fetch user's profile
+        const profileRes = await api.get('/auth/profile');
+        const profileData = profileRes.data;
+        setProfile({
+          name: profileData.name || '',
+          email: profileData.email || '',
+          phone: profileData.phone || '',
+          address: profileData.address || '',
+        });
+        
         // Fetch user's orders
         const ordersRes = await api.get('/orders/my-orders');
         const ordersData = ordersRes.data || [];
@@ -135,11 +147,25 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  const handleProfileSave = () => {
-    toast.success('Profile updated successfully');
+  const handleProfileSave = async () => {
+    try {
+      setSavingProfile(true);
+      await api.put('/auth/profile', {
+        name: profile.name,
+        phone: profile.phone,
+        address: profile.address,
+      });
+      toast.success('Profile updated successfully');
+    } catch (error: unknown) {
+      console.error('Failed to update profile', error);
+      const err = error as { response?: { data?: { detail?: string } } };
+      toast.error(err.response?.data?.detail || 'Failed to update profile');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!passwords.current || !passwords.new || !passwords.confirm) {
       toast.error('Please fill in all password fields');
       return;
@@ -153,8 +179,21 @@ const Dashboard = () => {
       return;
     }
     
-    toast.success('Password changed successfully');
-    setPasswords({ current: '', new: '', confirm: '' });
+    try {
+      setChangingPassword(true);
+      await api.post('/auth/change-password', {
+        current_password: passwords.current,
+        new_password: passwords.new,
+      });
+      toast.success('Password changed successfully');
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch (error: unknown) {
+      console.error('Failed to change password', error);
+      const err = error as { response?: { data?: { detail?: string } } };
+      toast.error(err.response?.data?.detail || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   const tabs = [
@@ -476,9 +515,9 @@ const Dashboard = () => {
                           </div>
 
                           <div className="pt-4">
-                            <Button onClick={handleProfileSave} className="gap-2">
+                            <Button onClick={handleProfileSave} disabled={savingProfile} className="gap-2">
                               <Save className="h-4 w-4" />
-                              Save Changes
+                              {savingProfile ? 'Saving...' : 'Save Changes'}
                             </Button>
                           </div>
                         </CardContent>
@@ -528,9 +567,9 @@ const Dashboard = () => {
                           <p className="text-sm text-muted-foreground">
                             Password must be at least 8 characters long
                           </p>
-                          <Button onClick={handlePasswordChange} variant="outline" className="gap-2">
+                          <Button onClick={handlePasswordChange} disabled={changingPassword} variant="outline" className="gap-2">
                             <Lock className="h-4 w-4" />
-                            Change Password
+                            {changingPassword ? 'Changing...' : 'Change Password'}
                           </Button>
                         </CardContent>
                       </Card>

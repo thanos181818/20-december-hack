@@ -104,3 +104,88 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), session: Async
     
     access_token = create_access_token(data={"sub": user.email, "role": user.role.value})
     return {"access_token": access_token, "token_type": "bearer", "role": user.role.value}
+
+
+# --- Profile Endpoints ---
+from pydantic import BaseModel
+
+class ProfileUpdate(BaseModel):
+    name: str | None = None
+    phone: str | None = None
+    address: str | None = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.get("/profile")
+async def get_profile(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get current user's profile information."""
+    # Get the linked contact for additional info
+    contact = None
+    if current_user.contact_id:
+        contact = await session.get(Contact, current_user.contact_id)
+    
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": contact.name if contact else current_user.email.split('@')[0],
+        "phone": contact.phone if contact else None,
+        "address": contact.address if contact else None,
+        "role": current_user.role.value,
+    }
+
+@router.put("/profile")
+async def update_profile(
+    profile_data: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Update current user's profile information."""
+    if not current_user.contact_id:
+        raise HTTPException(status_code=400, detail="User has no linked contact profile")
+    
+    contact = await session.get(Contact, current_user.contact_id)
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact profile not found")
+    
+    # Update fields if provided
+    if profile_data.name is not None:
+        contact.name = profile_data.name
+    if profile_data.phone is not None:
+        contact.phone = profile_data.phone
+    if profile_data.address is not None:
+        contact.address = profile_data.address
+    
+    session.add(contact)
+    await session.commit()
+    await session.refresh(contact)
+    
+    return {
+        "status": "success",
+        "message": "Profile updated successfully",
+        "name": contact.name,
+        "phone": contact.phone,
+        "address": contact.address,
+    }
+
+@router.post("/change-password")
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Change user's password."""
+    # Verify current password
+    if not pwd_context.verify(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    # Update password
+    current_user.hashed_password = pwd_context.hash(password_data.new_password)
+    session.add(current_user)
+    await session.commit()
+    
+    return {"status": "success", "message": "Password changed successfully"}
