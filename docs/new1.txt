@@ -1,0 +1,274 @@
+**Page: Portal User - Home Page**
+
+**Header/Navigation:**
+- Company Logo → Home Page
+- Home link → Home Page
+- Shop link → Product Listing page
+- My Account link → only when logged in, goes to My Account/Orders page
+- Authentication: Sign In button (if not logged in), User name display with Sign Out option (if logged in)
+- Cart icon → Cart Page
+
+**Body:**
+- Displays Home Page content
+- Landing page after login/logout/order completion
+- Shows promotional/featured products
+
+**User Visibility Rules:**
+- My Account menu hidden for guests, visible only when logged in
+- Cart accessible for all, checkout requires login
+
+**Navigation Flow:**
+- Home Page → Shop Page
+- Home Page → Product Detail Page
+- Home Page → Cart Page
+- Home Page → Sign In Page
+- Home Page → My Account Page (logged-in only)
+
+---
+
+**Page: Shop Page - Product Listing**
+
+**Header:** (same as Home Page)
+- Shop link highlighted
+
+**Breadcrumb Navigation:**
+- Shows path (All Products / Category / Product Name)
+- Each level clickable
+
+**Category Tabs:**
+- T-Shirts, Shirts, Kurtas, Formals, Jeans, Hoodies, Sarees, Nightwear
+- Click filters products by type
+
+**Left Sidebar Filters:**
+- Category: Men, Women, Children
+- Size: S, M, L, XL, etc.
+- Material: Cotton, Nylon, Others
+- Color: multiple selection
+- Price Range: slider/selector
+- Brand/Seller tag (optional)
+
+**Search & Sort:**
+- Search bar for product name/description
+- Sort by: Price (Low to High), Price (High to Low)
+
+**Product Grid:**
+- Product cards with image, name, description, price
+- Click product → Product Detail Page
+
+**Visibility Rules:**
+- Only published products shown
+- Stock availability affects display/add-to-cart
+
+**Navigation Flow:**
+- Shop Page → Product Detail Page
+- Shop Page → Cart Page
+- Shop Page → Home Page
+- Shop Page → My Account (logged-in)
+- Shop Page → Checkout Page
+
+---
+
+**Page: Product Detail Page**
+
+**Header:** (same as Home Page)
+
+**Breadcrumb Navigation:**
+- Shows product path (All Products / Category / Product Name)
+
+**Product Display:**
+- Image gallery with thumbnails and main preview
+- Product name and price
+- Color selection options
+- Quantity selector (+/- buttons)
+- Add to Cart button
+
+**Terms & Conditions:**
+- 30-day money-back guarantee
+- Shipping timeline
+
+**Visibility Rules:**
+- Only published products accessible
+
+**Navigation Flow:**
+- Product Page → Cart Page (via Add to Cart)
+- Product Page → Shop Page
+- Product Page → Home Page
+- Product Page → Checkout Page
+
+---
+
+**Page: Cart Page**
+
+**Header:** (same as Home Page)
+- Cart icon shows item count
+
+**Checkout Progress:**
+- Order → Address → Payment (Order step highlighted)
+
+**Cart Items:**
+- Product name, price, quantity selector, remove button
+- Quantity changes update totals
+- Remove button removes item
+
+**Discount Section:**
+- Discount code input field with Apply button
+- Discount appears as separate line after application
+
+**Price Summary:**
+- Subtotal, Taxes, Total payable
+- Updates dynamically
+
+**Checkout Action:**
+- Checkout button → Address Page (requires login if not logged in)
+
+**Address & Payment Preview:**
+- Shows products, subtotal, taxes, total
+- Confirm button in final payment step
+
+**Navigation Flow:**
+- Cart Page → Product Page
+- Cart Page → Address Page
+- Cart Page → Payment Page
+- Cart Page → Order Confirmation Page
+
+---
+
+**Page: Order Confirmation Page**
+
+**Header:** (same as Home Page)
+- My Account → My Orders/Account Page
+- Cart empty after order
+
+**Confirmation Elements:**
+- "Thank you for your order" message
+- Order ID/Sale Order Number (e.g., SO001)
+- "Your payment has been processed" message
+
+**Order Summary:**
+- Product name, quantity, price
+- Applied discount with coupon code
+- Subtotal, Taxes, Total amount paid
+
+**Print Option:**
+- Print button for order summary
+
+**Navigation Flow:**
+- Order Confirmation Page → Home Page
+- Order Confirmation Page → Shop Page
+- Order Confirmation Page → My Account → My Orders
+
+---
+
+**Page: My Account Page**
+
+**Header:** (same as Home Page)
+- My Account link highlighted
+
+**Access Rules:**
+- Only accessible when logged in
+- Redirects to Sign In if not logged in
+
+**User Information:**
+- Displays user name, address, phone, email (read-only)
+
+**Options:**
+- User Profile → Edit name, email, password, address
+- Your Orders → Order History page
+- Your Invoices → Invoice List page
+
+**Navigation Flow:**
+- My Account → User Profile Edit Page
+- My Account → Order History Page
+- My Account → Invoice List Page
+- My Account → Home Page
+- My Account → Shop Page
+
+---
+
+**Page: Sale Orders Page**
+
+**Header:** (same as Home Page)
+- My Account → My Account Page
+
+**Order List:**
+- Sale Order Number, Order Date, Total Order Amount
+- Shows portal and backend-created orders
+- User sees only their own orders
+
+**Navigation Flow:**
+- My Account → Sale Orders Page
+- Sale Orders Page → Home Page
+- Sale Orders Page → Invoices Page
+
+---
+
+**Page: Invoices Page**
+
+**Header:** (same as Home Page)
+- My Account → My Account Page
+
+**Invoice List:**
+- Invoice Number, Invoice Date, Due Date, Amount Due, Status (Paid/Waiting for payment)
+- Shows all customer invoices for user
+- Portal and manually created invoices
+
+**Navigation Flow:**
+- My Account → Invoices Page
+- Invoices Page → Sale Orders Page
+- Invoices Page → Home Page
+
+---
+
+**Page: Sale Order View Page**
+
+**Header:** (same as Home Page)
+- My Account → My Account Page
+
+**Breadcrumb:**
+- Home / Sale Orders / Sale Order SO001
+
+**Order Details:**
+- Sale Order Number, Order Date
+- Linked Invoice Number, Invoice Date, Invoice Status
+- Customer address details
+- Product table with name, quantity, unit price, taxes, amount
+- Discount display (if applied)
+- Price calculation: Untaxed amount, Tax amount, Total
+- Payment terms display
+- Print button
+- Previous/Next order navigation
+
+**Navigation Flow:**
+- Sale Orders Page → Sale Order View Page
+- Sale Order View Page → Invoices Page
+- Sale Order View Page → Home Page
+- Sale Order View Page → My Account Page
+
+---
+
+**Page: Invoice View Page**
+
+**Header:** (same as Home Page)
+- My Account → My Account Page
+
+**Breadcrumb:**
+- Home / Invoices / INV/0015
+
+**Invoice Details:**
+- Invoice Number, Source Sale Order Number
+- Invoice Date, Due Date
+- Customer address details
+- Product table with name, quantity, unit price, tax, amount
+- Discount display (if applied)
+- Payment terms
+- Amount summary: Untaxed, Tax, Total, Paid, Due
+- Payment button (only if Amount Due > 0)
+- Print button
+- Previous/Next invoice navigation
+
+**Navigation Flow:**
+- Invoices Page → Invoice View Page
+- Invoice View Page → Payment Page
+- Invoice View Page → Sale Order View Page
+- Invoice View Page → My Account Page
+- Invoice View Page → Home Page

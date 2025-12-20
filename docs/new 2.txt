@@ -1,0 +1,604 @@
+**ADMIN **
+
+
+**Page: Login Page**
+
+**Visible:**
+- Email field
+- Password field  
+- Login button
+- Helper text below form
+
+**Requirements:**
+- Inputs: Email (string), Password (string)
+- Action: Submit login
+- Validation: Empty field check
+- System behavior: Authenticate internal user, redirect to Dashboard on success, show error message on failure
+
+---
+
+**Page: Signup Page**
+
+**Visible:**
+- Name field
+- Email field
+- Password field
+- Confirm Password field
+- Signup button
+- Terms text
+
+**Requirements:**
+- Inputs: Full Name, Email, Password, Confirm Password
+- Validations: Email uniqueness, Password match
+- Action: Create internal user
+- System behavior: Redirect to Login after success
+
+---
+
+**Page: Product Page**
+
+**Visible Tabs (Top Nav):**
+- Products (active)
+- Billing & Payments
+- Terms & Offers
+- Users & Contacts
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**Product State Tabs:**
+- New
+- Confirmed
+- Archived
+
+**Product Fields (Left Section):**
+- Product Name (text, required)
+- Product Category (dropdown)
+- Product Type (dropdown)
+- Material (dropdown, optional)
+- Color (multi-select)
+- Current Stock (integer, required)
+
+**Product Fields (Right Section):**
+- Sales Price (decimal, required)
+- Sales Tax (percentage/dropdown, optional)
+- Purchase Price (decimal)
+- Purchase Tax (percentage/dropdown)
+- Published checkbox
+
+**Additional Sections:**
+- Product Images (multiple upload slots, + icon)
+
+**Actions:**
+- Save product
+- Navigate between products (< > arrows)
+- Switch product state tabs (New/Confirmed/Archived)
+- Toggle published status
+- Upload/remove images
+
+**Validations:**
+- Required: Product Name, Product Category, Sales Price, Current Stock
+- Conditional: If published = true → must have Sales Price and at least one image
+- Stock cannot be negative
+- Only Confirmed products can be published
+
+**Navigation Links:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile page or Sign Out → Login page
+- Product State Tabs → filter products by status
+
+
+
+**Page: Contacts & Users — Main (Split) Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments
+- Terms & Offers
+- Users & Contacts (active)
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**Summary Cards:**
+- Users Card: Shows internal users count (10), portal users count (354)
+- Contacts Card: Shows customers count (364), vendors count (25)
+
+**Actions:**
+- Click Users card → Users Management Page
+- Click Contacts card → Contacts Management Page
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
+---
+
+**Page: Users Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments
+- Terms & Offers
+- Users & Contacts (active)
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**User Status Tabs:**
+- New
+- Confirmed
+- Archived
+
+**User Fields:**
+- User Name (text, required)
+- Email (email, required, unique)
+- Phone (phone, optional)
+- Address fields: Address Line, City, State, Pincode (optional)
+- Role dropdown: Internal User / Portal User
+
+**Actions:**
+- Change Password button (for Confirmed users)
+- Pagination arrows (< >) to navigate between users
+- Save user
+
+**Validations:**
+- Required: User Name, Email, Role
+- Archived users cannot log in
+- Email cannot be edited once confirmed
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
+---
+
+**Page: Contacts Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments
+- Terms & Offers
+- Users & Contacts (active)
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**Contact Status Tabs:**
+- New
+- Confirmed
+- Archived
+
+**Contact Fields:**
+- Contact Name (text, required for named contacts, hidden for anonymous)
+- Email (email, optional)
+- Phone (phone, optional)
+- Address fields: Address line, City, State, Pincode (optional)
+- Type dropdown: Customer / Vendor / Both
+
+**Special Logic:**
+- Anonymous Customers: Contact Name field hidden, user can set quantity to generate
+- Contact type determines visibility in Orders (Customer) or Bills (Vendor)
+
+**Actions:**
+- Pagination arrows (< >) to navigate between contacts
+- Save contact
+
+**Validations:**
+- Required fields depend on type:
+  - Customer: Optional name
+  - Vendor: Contact Name required
+  - Both: Contact Name required
+- Archived contacts cannot be selected in Orders/Bills
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
+---
+
+**Page: Payment Terms & Offers — Main Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments
+- Payment Terms & Offers (active)
+- Users & Contacts
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**Summary Cards:**
+- Payment Terms Card: Shows number of payment terms (10)
+- Offers Card: Shows number of active offers (3)
+
+**Actions:**
+- Click Payment Terms card → Payment Terms Management Page
+- Click Offers card → Offers Management Page
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
+---
+
+**Page: Payment Terms Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments
+- Payment Terms & Offers (active)
+- Users & Contacts
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**Controls:**
+- New button (creates new payment term)
+- Pagination arrows (< >) to navigate between terms
+
+**Payment Term Fields:**
+- Name (text, required, unique)
+- Early Discount checkbox (boolean)
+- Early Discount Details: Discount percentage, Condition text (if checked)
+- Example Preview (read-only, auto-generated)
+- Active checkbox (boolean)
+
+**Rules:**
+- Only Active payment terms available in invoice/sales order selection
+- Payment term text printed on invoices/sales orders
+- Inactive terms cannot be selected
+
+**Actions:**
+- Save payment term
+
+**Validations:**
+- Name required
+- Early discount fields required only if checkbox checked
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
+---
+
+**Page: Offers Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments
+- Payment Terms & Offers (active)
+- Users & Contacts
+- Reports
+- User Profile (Username, My Profile, Sign Out)
+
+**Controls:**
+- New button (creates new offer)
+- Generate Coupon Codes button
+- Coupons counter (e.g., "Coupons 15")
+- Pagination arrows (< >) to navigate between offers
+
+**Offer Fields:**
+- Name (text, required)
+- Discount Percentage (numeric, required)
+- Start Date (date picker, required)
+- End Date (date picker, required)
+- Available On selection: Sales, Website
+- Target Type selection: Customer / Vendor / Both
+
+**Actions:**
+- Generate Coupon Codes → opens Generate Coupon modal/page
+- Click coupons counter → Coupons List Page (filtered to this offer)
+- Save offer
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
+---
+
+**Page: Generate Coupon Modal/Page**
+
+**Fields:**
+- For selection dropdown: Customers / Vendors / Both
+- Customers multi-select from contacts (hidden for anonymous flow)
+- Quantity to generate (integer)
+- Valid Until (date picker)
+
+**Rules:**
+- Anonymous Customers: Customer field hidden, user manually sets quantity
+- Selected Customers: Customer field visible, quantity auto-calculated
+- No Customer Selected: Coupons generated for ALL contacts, quantity = total contacts count
+
+**Actions:**
+- Generate button (creates coupon records)
+- Cancel button (closes modal)
+
+---
+
+**Page: Coupons List Page**
+
+**Table Columns:**
+- Code
+- Valid Until
+- Program (offer name)
+- Status (Used / Unused)
+- Customer (assigned customer name)
+
+**Example Rows:**
+- 0440-a107-4a70 → Used → Pratik Patel
+- 0442-f470-4614 → Unused → Raj Verma
+
+**Rules:**
+- Unused coupons can be used if within validity and offer active
+- Used coupons locked, cannot be reused
+- Page automatically filtered by offer
+
+
+**Page: Billing & Payments — Main Page**
+
+**Visible Tabs (Top Nav):**
+- Products
+- Billing & Payments (active)
+- Terms & Offers
+- Users & Contacts
+- Dashboard
+- User Profile (Username, My Profile, Sign Out)
+
+**Automatic Invoicing Toggle:**
+- Checkbox near "Sales" heading for auto-invoicing
+
+**Sales Section Cards:**
+- Sales Orders Card: Total orders of current month, Pending orders to invoice
+- Customer Invoices Card: Unpaid invoices, Overdue invoices
+- Customer Payments Card: Shows summary/count
+
+**Purchase Section Cards:**
+- Purchase Orders Card: Total orders of current month, Pending orders to bill
+- Vendor Bills Card: Unpaid bills, Overdue bills
+- Vendor Payments Card: Shows summary/count
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+- Cards click to respective pages:
+  - Sales Orders → Sales Orders list
+  - Customer Invoices → Invoices list
+  - Customer Payments → Payments received
+  - Purchase Orders → Purchase Orders list
+  - Vendor Bills → Bills list
+  - Vendor Payments → Payments made
+
+---
+
+**Page: Sales Order Page**
+
+**Controls:**
+- New button (creates new SO, auto-generates SO number)
+- Navigation arrows (< >) between orders
+
+**Header Fields:**
+- SO Number (auto-generated sequential, e.g., SO001)
+- Customer Name (dropdown from Contacts & Users)
+- Payment Term (dropdown from active payment terms)
+- SO Date (defaults to today)
+
+**Action Buttons:**
+- Confirm (Draft → Confirmed, locks fields)
+- Print (printable SO)
+- Send (send to customer)
+- Cancel (moves to Cancelled)
+- Create Invoice button (visible after SO confirmed, creates/redirects to invoice)
+
+**Line Items Table Columns:**
+- Sr. No.
+- Product (dropdown from Products table)
+- Qty
+- Unit Price (from product)
+- Untaxed Amount
+- Tax %
+- Tax Amount
+- Total
+
+**Special Elements:**
+- Discount line item (added when coupon applied, negative amount)
+- Coupon Code button (only for Sale Order, opens modal)
+- Status flow: Draft → Confirm → Cancelled
+
+**Totals Section:**
+- Untaxed Total
+- Tax Total
+- Grand Total (includes discount)
+
+---
+
+**Page: Customer Invoice Page**
+
+**Controls:**
+- New button (creates new invoice)
+- Navigation arrows (< >) between invoices
+
+**Header Fields:**
+- Invoice Number (auto-generated sequential, e.g., INV/0001)
+- Customer Name (dropdown from Contacts & Users)
+- Payment Term (dropdown from active payment terms)
+- Reference Sales Order Number (auto-filled if from SO)
+- Invoice Date (defaults to today)
+- Due Date (auto-calculated from payment term)
+
+**Action Buttons:**
+- Confirm (Draft → Confirmed)
+- Print (printable invoice)
+- Send (send to customer)
+- Cancel (cancels invoice)
+- Pay button (visible until invoice fully paid, opens payment page)
+- Order button (visible if linked to sale order, redirects to SO)
+
+**Line Items Table:** (same columns as Sales Order)
+- Inherits from Sales Order if created from SO
+- Discount line copied from SO
+
+**Payment Tracking:**
+- Paid On (date)
+- Paid Amount
+- Amount Due (auto-calculated)
+
+**Status flow:** Draft → Confirm → Cancelled
+
+---
+
+**Page: Invoice Payment Page**
+
+**Controls:**
+- New button (creates new payment)
+- Confirm/Print/Send/Cancel buttons
+
+**Early Payment Discount Message:**
+- Shows if payment term has early discount and payment date ≤ discount date
+
+**Payment Form Fields:**
+- Payment Type: Receive
+- Partner Type: Customer
+- Partner (auto-filled from invoice)
+- Date (default today)
+- Reference (default invoice number)
+- Amount (auto-filled with Amount Due, editable for partial)
+
+**Effects:**
+- On confirm: reduces invoice Amount Due
+- If Amount Due = 0: invoice marked Paid, Pay button disappears
+
+**Navigation:**
+- Button to navigate back to Invoice
+- If invoice linked to SO: navigate to Sales Order
+
+---
+
+**Page: Purchase Order Page**
+
+**Controls:**
+- New button (creates new PO)
+- Navigation arrows (< >) between POs
+
+**Header Fields:**
+- PO Number (auto-generated sequential, e.g., PO001)
+- Vendor Name (dropdown from Contacts & Users)
+- PO Date (defaults to today)
+
+**Action Buttons:**
+- Confirm (Draft → Confirmed)
+- Print (printable PO)
+- Send (send to vendor)
+- Cancel (moves to Cancelled)
+- Create Bill button (visible after PO confirmed, creates/redirects to Vendor Bill)
+
+**Line Items Table Columns:**
+- Sr. No.
+- Product (dropdown from Products table)
+- Qty
+- Unit Price (purchase price from product)
+- Untaxed Amount
+- Tax % (purchase tax)
+- Tax Amount
+- Total
+
+**Totals Section:**
+- Untaxed Total
+- Tax Total
+- Grand Total
+
+**Status flow:** Draft → Confirm → Cancelled
+
+---
+
+**Page: Vendor Bill Page**
+
+**Controls:**
+- New button (creates new bill)
+- Navigation arrows (< >) between bills
+
+**Header Fields:**
+- Bill Number (auto-generated sequential, e.g., BILL/0001)
+- Vendor Name (dropdown from Contacts)
+- Reference Purchase Order Number (auto-filled if from PO)
+- Bill Date (defaults to today)
+- Due Date (calculated from terms or manual)
+
+**Action Buttons:**
+- Confirm (Draft → Confirmed)
+- Print (printable bill)
+- Send (send to vendor)
+- Cancel (cancels bill)
+- Pay button (visible until bill fully paid, opens payment page)
+- Order button (visible if linked to PO, redirects to PO)
+- Payment button (redirects to Bill Payment page)
+
+**Line Items Table:** (same columns as Purchase Order)
+- Copied from PO if created from PO
+
+**Payment Tracking:**
+- Paid On (date)
+- Paid Amount
+- Amount Due
+
+**Status flow:** Draft → Confirm → Cancelled
+
+---
+
+**Page: Bill Payment Page**
+
+**Controls:**
+- New button (creates new payment)
+- Confirm/Print/Send/Cancel buttons
+
+**Payment Form Fields:**
+- Payment Type: Send
+- Partner Type: Vendor
+- Partner (auto-filled from bill)
+- Date (default today)
+- Reference (default bill number)
+- Amount (auto-filled with Amount Due, editable for partial)
+
+**Effects:**
+- On confirm: reduces bill Amount Due
+- If Amount Due = 0: bill marked Paid, Pay button disappears
+
+**Navigation:**
+- Button to navigate back to Bill
+- If bill linked to PO: navigate to Purchase Order
+
+**Page: Reports Page**
+
+**Visible Tabs (Top Nav):**
+- Reports (active)
+- Other tabs (Products, Billing & Payments, Terms & Offers, Users & Contacts)
+- User Profile (Username, My Profile, Sign Out)
+
+**Report Configuration Fields:**
+- Report Type dropdown: Sales / Purchase
+- Group By dropdown: Product / Contact
+- From Date picker (optional)
+- To Date picker (optional)
+
+**Action Buttons:**
+- Print button (generates printable report)
+- Cancel button (resets form)
+
+**Validations:**
+- Report Type required
+- Group By required
+- To Date ≥ From Date
+
+**Report Logic:**
+- Sales Reports: data from Sales Orders/Invoices
+- Purchase Reports: data from Purchase Orders/Vendor Bills
+- Grouped by: Product or Contact
+- Metrics: Quantity, Untaxed amount, Tax, Total
+
+**Navigation:**
+- Company Logo → Dashboard/Home
+- Top Nav Tabs → respective modules
+- User Profile → My Profile or Sign Out → Login
+
