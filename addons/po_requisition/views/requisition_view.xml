@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- Requisition form -->
+        <record model="ir.ui.view" id="po_requisition_form" >
+            <field name="name">po.requisition.form</field>
+            <field name="model">po.requisition</field>
+            <field name="arch" type="xml">
+                <form string="PO Requisition">
+                    <header>
+                        <button confirm="Are you sure you want to Approve this Requsition?" 
+                        name="action_approve_po_requisition" 
+                        states="draft" string="Approve" type="object" class="oe_highlight" 
+                        groups="requisitions.group_manager"/>
+                        <button name="cancel"
+                        confirm="Are you sure you want to cancel this Requisition?"
+                        states="draft" string="Cancel" type="object"/>
+                        <field name="state" widget="statusbar"/>
+                    </header>
+                    <sheet>
+                         <div class="oe_left" style="width: 500px;">
+                            <div class="oe_title" style="width: 390px;">
+                                <!-- <h1><label class="oe_edit_only" for="name" string="Requisition #"/>
+                                <field name="po_reference" readonly="1" class="oe_inline"/></h1> -->
+                                <h1><field name="name" readonly="1"/></h1>
+                            </div>
+                        </div>
+                        <div class="oe_button_box" name="button_box">
+                            <button  attrs="{'invisible':[('state', 'not in', ('approve'))]}" type="action" 
+                                class="oe_stat_button" name="%(purchase.purchase_rfq)d"                                 
+                                context="{'search_default_requisition_id': active_id, 'default_requisition_id': active_id}" icon="fa-list">
+                                <field string="RFQs/POs" name="po_count" widget="statinfo"/>
+                            </button>                            
+                        </div>
+                        <group>
+                            <group>                                
+                                <field name="warehouse_id" invisible='1'/>
+                                <field name="delivery_date" attrs="{'readonly': [('state', 'in', ('approve', 'cancel'))]}"/>
+                                <field name="partner_id" invisible='1'/>                                
+                                <!-- <field name="state" /> -->
+                            </group>
+                            <group>
+                                <field name="create_uid" string='Requested By' readonly='1'/>
+                                <field name='user' readonly='1'/>
+                            </group>
+                        </group>
+                        <notebook>
+                            <page string="Products">
+                                <field name="order_line" attrs="{'readonly': [('state', 'in', ('approve', 'cancel'))]}">
+                                    <tree string="Purchase Order Lines" editable="bottom">
+                                        <!-- <field name="product_id" force_save="1"/> -->
+                                        <field name="partner_id" string="Vendor/Supplier"/>
+                                        <field name="product_id"/>
+                                        <field name="product_qty"/>
+                                        <field name="product_uom"/>
+                                        <field name="price_unit"/>
+                                        <field name="total"/>
+                                    </tree>                                    
+                                </field>
+                                <group>
+                                    <group></group>
+                                    <group>
+                                        <field name="total" string="Total Requisition"/>
+                                    </group>
+                                </group>
+                            </page>
+                        </notebook>
+                    </sheet>
+                    <div class="oe_chatter">
+                        <field name="message_follower_ids" widget="mail_followers" groups="base.group_user"/>
+                        <field name="message_ids" widget="mail_thread"/>
+                    </div>
+                </form>
+            </field>
+        </record>
+
+        <!-- Requisition action -->
+        <record model="ir.actions.act_window" id="po_requisition_action" >
+            <field name="name">Requisition</field>
+            <field name="res_model">po.requisition</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[]</field>
+            <field name="help" type="html">
+                <p class="oe_view_nocontent_create">Create The First Requisition
+                </p>
+            </field>
+        </record>
+
+        <!-- Requisition tree -->
+        <record model="ir.ui.view" id="po_requisition_tree" >
+            <field name="name">po.requisition.tree</field>
+            <field name="model">po.requisition</field>
+            <field name="arch" type="xml">
+                <tree default_order='create_date desc' string="PO Requisition">
+                    <field name="id" invisible="1"/>
+                    <field name="name" string="Name"/>
+                    <field name="warehouse_id" invisible='1'/>
+                    <field name="create_uid" string='Requested By'/>
+                    <field name="delivery_date" />
+                    <!-- <field name="po_reference" readonly="1"/> -->                    
+                    <field name='user'/>
+                    <field name="total" sum="Total"/>
+                    <field name="state" />
+                </tree>
+            </field>
+        </record>
+        <record model="ir.ui.view" id="po_with_requsition_form" >
+            <field name="name">PO with Requisition</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+            <field name="arch" type="xml">
+                <field name="date_approve" position="after">
+                    <field name="requisition_id" readonly='1' 
+                    attrs="{'invisible': [('requisition_id', '=', False)]}"/>
+                </field>
+            </field>
+        </record>
+        <record id="view_search_form_rfq_po_inherit" model="ir.ui.view">
+            <field name="name">po.search.form.inherit</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.view_purchase_order_filter"/>
+            <field name="arch" type="xml">
+                <field name="product_id" position='after'>
+                    <field name='requisition_id'/>
+                </field>
+                <xpath expr="//search/group" position="inside">
+                    <filter string="Requisition" name="Requisition" context="{'group_by':'requisition_id'}"/>
+                </xpath>
+            </field>
+        </record>
+
+        <!-- Requisition menu -->
+        <menuitem id="menu_procurement_management_po_requisition" name="Requisition" parent="purchase.menu_procurement_management" action="po_requisition_action" sequence="-1"/>
+    </data>
+</odoo>
