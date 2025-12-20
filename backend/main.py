@@ -5,6 +5,8 @@ from backend.auth import router as auth_router
 from backend.orders import router as orders_router
 from backend.admin_api import router as admin_router
 from backend.websocket_manager import manager
+from backend.visual_search import router as visual_search_router
+from backend.stock_alerts import router as stock_alerts_router
 
 app = FastAPI(title="ApparelDesk API")
 
@@ -33,6 +35,8 @@ async def on_startup():
 app.include_router(auth_router)
 app.include_router(orders_router)
 app.include_router(admin_router)
+app.include_router(visual_search_router)
+app.include_router(stock_alerts_router)
 
 # --- WebSocket Endpoint for Admin ---
 @app.websocket("/ws/admin")

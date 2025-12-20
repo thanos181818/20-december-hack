@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X, Shield, Sparkles } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Shield, Sparkles, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -56,6 +56,17 @@ const Navbar = () => {
               <Badge variant="secondary" className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 text-[10px] px-1.5 py-0">
                 <Sparkles className="h-2.5 w-2.5 mr-0.5" />
                 Beta
+              </Badge>
+            </Link>
+            <Link
+              to="/visual-search"
+              className="text-foreground/80 hover:text-primary transition-colors font-medium flex items-center gap-1"
+            >
+              <Search className="h-4 w-4" />
+              Visual Search
+              <Badge variant="secondary" className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 text-[10px] px-1.5 py-0">
+                <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                AI
               </Badge>
             </Link>
           </div>

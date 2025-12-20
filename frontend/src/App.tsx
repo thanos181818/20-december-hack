@@ -22,6 +22,7 @@ import OrderDetail from "./pages/OrderDetail";
 import InvoiceView from "./pages/InvoiceView";
 import Sales from "./pages/Sales";
 import VirtualTryOn from "./pages/VirtualTryOn";
+import VisualSearch from "./pages/VisualSearch";
 import NotFound from "./pages/NotFound";
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -38,6 +39,7 @@ import PaymentTermsOffers from "./pages/admin/PaymentTermsOffers";
 import UsersContacts from "./pages/admin/UsersContacts";
 import ReportsAdmin from "./pages/admin/ReportsAdmin";
 import AdminProfile from "./pages/admin/AdminProfile";
+import StockAlerts from "./pages/admin/StockAlerts";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +57,7 @@ const App = () => (
                 {/* Customer Portal Routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/virtual-try-on" element={<VirtualTryOn />} />
+                <Route path="/visual-search" element={<VisualSearch />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/cart" element={<Cart />} />
@@ -86,6 +89,7 @@ const App = () => (
                 <Route path="/admin/offers" element={<ProtectedRoute requireAdmin><PaymentTermsOffers /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UsersContacts /></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute requireAdmin><ReportsAdmin /></ProtectedRoute>} />
+                <Route path="/admin/stock-alerts" element={<ProtectedRoute requireAdmin><StockAlerts /></ProtectedRoute>} />
                 <Route path="/admin/profile" element={<ProtectedRoute requireAdmin><AdminProfile /></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />

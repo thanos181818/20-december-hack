@@ -10,6 +10,7 @@ import {
   Menu,
   ChevronDown,
   Home,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +33,7 @@ const navItems = [
   { label: 'Dashboard', href: '/admin', icon: Home },
   { label: 'Products', href: '/admin/products', icon: Package },
   { label: 'Billing & Payments', href: '/admin/billing', icon: CreditCard },
+  { label: 'Stock Alerts', href: '/admin/stock-alerts', icon: Bell },
   { label: 'Terms & Offers', href: '/admin/offers', icon: Percent },
   { label: 'Users & Contacts', href: '/admin/users', icon: Users },
   { label: 'Reports', href: '/admin/reports', icon: BarChart3 },
