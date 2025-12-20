@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { api, API_URL } from '@/lib/api';
 import { toast } from 'sonner';
 import {
@@ -46,7 +46,7 @@ export interface AdminProduct {
   price: number; 
 }
 
-export interface LineItem { id: string; productId: string; productName: string; quantity: number; unitPrice: number; tax: number; total: number; }
+export interface LineItem { id: string; productId: string; productName: string; quantity: number; unitPrice: number; tax: number; discount?: number; total: number; }
 export interface SalesOrder { id: string; orderNumber: string; customer: string; customerId: string; paymentTerm?: string; date: string; lineItems: LineItem[]; couponCode?: string; discount: number; subtotal: number; tax: number; total: number; status: OrderStatus; }
 export interface Invoice { id: string; invoiceNumber: string; customer: string; customerId: string; salesOrderId?: string; paymentTerm?: string; invoiceDate: string; dueDate: string; lineItems: LineItem[]; subtotal: number; tax: number; total: number; paid: number; status: InvoiceStatus; paidDate?: string; }
 export interface PurchaseOrder { id: string; orderNumber: string; vendor: string; vendorId: string; date: string; lineItems: LineItem[]; subtotal: number; tax: number; total: number; status: OrderStatus; }
@@ -128,18 +128,18 @@ const DEFAULT_USERS: User[] = [
 ];
 
 const DEFAULT_OFFERS: Offer[] = [
-  { id: 'offer-1', name: 'Summer Sale', discount: 20, startDate: '2024-06-01', endDate: '2024-08-31', availableOn: 'website', status: 'active' },
-  { id: 'offer-2', name: 'Bulk Discount', discount: 15, startDate: '2024-01-01', endDate: '2024-12-31', availableOn: 'sales', status: 'active' },
-  { id: 'offer-3', name: 'New Year Special', discount: 25, startDate: '2024-12-25', endDate: '2025-01-05', availableOn: 'website', status: 'upcoming' },
+  { id: 'offer-1', name: 'Holiday Sale', discount: 20, startDate: '2025-12-01', endDate: '2025-12-31', availableOn: 'website', status: 'active' },
+  { id: 'offer-2', name: 'Bulk Discount', discount: 15, startDate: '2025-01-01', endDate: '2025-12-31', availableOn: 'sales', status: 'active' },
+  { id: 'offer-3', name: 'New Year Special', discount: 25, startDate: '2025-12-25', endDate: '2026-01-05', availableOn: 'website', status: 'active' },
 ];
 
 const DEFAULT_COUPONS: Coupon[] = [
-  { id: 'coupon-1', code: 'SUMMER20', offerId: 'offer-1', offerName: 'Summer Sale', validUntil: '2024-08-31', status: 'unused' },
-  { id: 'coupon-2', code: 'BULK15A', offerId: 'offer-2', offerName: 'Bulk Discount', validUntil: '2024-12-31', customerName: 'John Doe', status: 'used' },
-  { id: 'coupon-3', code: 'NEWYEAR25', offerId: 'offer-3', offerName: 'New Year Special', validUntil: '2025-01-05', customerName: 'Jane Smith', status: 'unused' },
+  { id: 'coupon-1', code: 'HOLIDAY20', offerId: 'offer-1', offerName: 'Holiday Sale', validUntil: '2025-12-31', status: 'unused' },
+  { id: 'coupon-2', code: 'BULK15A', offerId: 'offer-2', offerName: 'Bulk Discount', validUntil: '2025-12-31', customerName: 'John Doe', status: 'used' },
+  { id: 'coupon-3', code: 'NEWYEAR25', offerId: 'offer-3', offerName: 'New Year Special', validUntil: '2026-01-05', customerName: 'Jane Smith', status: 'unused' },
 ];
 
-const STORAGE_VERSION = '1';
+const STORAGE_VERSION = '2';
 const STORAGE_VERSION_KEY = 'admin_data_version';
 
 const STORAGE_KEYS = {
@@ -212,6 +212,7 @@ interface AdminDataContextType {
   invoices: Invoice[];
   addInvoice: (invoice: Omit<Invoice, 'id'>) => string;
   updateInvoice: (id: string, invoice: Partial<Invoice>) => void;
+  deleteInvoice: (id: string) => void;
   
   purchaseOrders: PurchaseOrder[];
   addPurchaseOrder: (order: Omit<PurchaseOrder, 'id'>) => string;
@@ -268,6 +269,87 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [coupons, setCoupons] = useState<Coupon[]>(() => loadFromStorage(STORAGE_KEYS.coupons, DEFAULT_COUPONS));
   const [autoInvoicing, setAutoInvoicing] = useState(true);
   const [loading, setLoading] = useState(true);
+  const productNameMapRef = useRef(new Map<string, string>());
+  const contactNameMapRef = useRef(new Map<string, string>());
+
+  const getContactName = useCallback((id?: number | string, fallback?: string) => {
+    if (id === undefined || id === null) {
+      return fallback || 'Unknown';
+    }
+    return contactNameMapRef.current.get(id.toString()) || fallback || 'Unknown';
+  }, []);
+
+  const getProductName = useCallback((id?: number | string) => {
+    if (id === undefined || id === null) {
+      return 'Unknown Product';
+    }
+    const key = id.toString();
+    return productNameMapRef.current.get(key) || `Product ${key}`;
+  }, []);
+
+  const mapSalesOrder = useCallback((so: BackendSaleOrder): SalesOrder => {
+    const totals = calculateSalesOrderTotals(so);
+    return {
+      id: so.id.toString(),
+      orderNumber: so.order_number,
+      customer: getContactName(so.customer_id, so.customer?.name),
+      customerId: so.customer_id.toString(),
+      paymentTerm: undefined,
+      date: so.order_date,
+      lineItems: so.lines?.map(line => {
+        const lineDiscount = line.discount ?? 0;
+        const base = line.unit_price * line.quantity - lineDiscount;
+        const taxAmount = base * ((line.tax_rate ?? 0) / 100);
+        return {
+          id: line.id?.toString() || '',
+          productId: line.product_id.toString(),
+          productName: getProductName(line.product_id),
+          quantity: line.quantity,
+          unitPrice: line.unit_price,
+          tax: line.tax_rate,
+          discount: lineDiscount,
+          total: base + taxAmount,
+        };
+      }) || [],
+      couponCode: so.notes || undefined,
+      discount: totals.discount,
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      total: totals.total,
+      status: so.status as OrderStatus,
+    };
+  }, [getContactName, getProductName]);
+
+  const mapInvoiceFromBackend = useCallback((inv: BackendInvoice): Invoice => {
+    const totals = calculateInvoiceTotals(inv);
+    return {
+      id: inv.id.toString(),
+      invoiceNumber: inv.invoice_number,
+      customer: getContactName(inv.customer_id, inv.customer?.name),
+      customerId: inv.customer_id.toString(),
+      salesOrderId: inv.sale_order_id?.toString(),
+      invoiceDate: inv.invoice_date,
+      dueDate: inv.due_date || inv.invoice_date,
+      lineItems: inv.lines?.map(line => {
+        const base = line.unit_price * line.quantity;
+        const taxAmount = base * ((line.tax_rate ?? 0) / 100);
+        return {
+          id: line.id?.toString() || '',
+          productId: line.product_id.toString(),
+          productName: line.description || getProductName(line.product_id),
+          quantity: line.quantity,
+          unitPrice: line.unit_price,
+          tax: line.tax_rate,
+          total: base + taxAmount,
+        };
+      }) || [],
+      subtotal: totals.subtotal,
+      tax: totals.tax,
+      total: totals.total,
+      paid: inv.amount_paid,
+      status: inv.status === 'paid' ? 'paid' : inv.amount_paid > 0 ? 'partial' : inv.status as InvoiceStatus,
+    };
+  }, [getContactName, getProductName]);
 
   // Persist local-only collections so admin changes survive reloads
   useEffect(() => {
@@ -324,6 +406,27 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     active: true,
   });
 
+  const calculateSalesOrderTotals = (order: BackendSaleOrder) => {
+    const taxAmount = order.tax_amount ?? 0;
+    const totalAmount = order.total_amount ?? 0;
+    return {
+      subtotal: Math.max(0, totalAmount - taxAmount),
+      tax: taxAmount,
+      total: totalAmount,
+      discount: order.discount_amount || 0,
+    };
+  };
+
+  const calculateInvoiceTotals = (invoice: BackendInvoice) => {
+    const taxAmount = invoice.tax_amount ?? 0;
+    const totalAmount = invoice.total_amount ?? 0;
+    return {
+      subtotal: Math.max(0, totalAmount - taxAmount),
+      tax: taxAmount,
+      total: totalAmount,
+    };
+  };
+
   // Fetch all data from backend
   useEffect(() => {
     const fetchData = async () => {
@@ -332,10 +435,12 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         
         // Fetch products
         const productsRes = await productsApi.getAll();
+        productNameMapRef.current = new Map(productsRes.data.map(product => [product.id.toString(), product.name]));
         setProducts(productsRes.data.map(mapBackendProduct));
         
         // Fetch contacts
         const contactsRes = await contactsApi.getAll();
+        contactNameMapRef.current = new Map(contactsRes.data.map(contact => [contact.id.toString(), contact.name || 'Unknown']));
         setContacts(contactsRes.data.map(mapBackendContact));
         
         // Fetch payment terms
@@ -351,64 +456,22 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ]);
         
         // Map sales orders
-        setSalesOrders(salesOrdersRes.data.map((so): SalesOrder => ({
-          id: so.id.toString(),
-          orderNumber: so.order_number,
-          customer: so.customer?.name || 'Unknown',
-          customerId: so.customer_id.toString(),
-          date: so.order_date,
-          lineItems: so.lines?.map(line => ({
-            id: line.id?.toString() || '',
-            productId: line.product_id.toString(),
-            productName: 'Product ' + line.product_id,
-            quantity: line.quantity,
-            unitPrice: line.unit_price,
-            tax: line.tax_rate,
-            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
-          })) || [],
-          discount: so.discount_amount,
-          subtotal: so.total_amount - so.tax_amount,
-          tax: so.tax_amount,
-          total: so.total_amount,
-          status: so.status as OrderStatus,
-        })));
+        setSalesOrders(salesOrdersRes.data.map(mapSalesOrder));
         
         // Map invoices
-        setInvoices(invoicesRes.data.map((inv): Invoice => ({
-          id: inv.id.toString(),
-          invoiceNumber: inv.invoice_number,
-          customer: inv.customer?.name || 'Unknown',
-          customerId: inv.customer_id.toString(),
-          salesOrderId: inv.sale_order_id?.toString(),
-          invoiceDate: inv.invoice_date,
-          dueDate: inv.due_date || inv.invoice_date,
-          lineItems: inv.lines?.map(line => ({
-            id: line.id?.toString() || '',
-            productId: line.product_id.toString(),
-            productName: line.description || 'Product ' + line.product_id,
-            quantity: line.quantity,
-            unitPrice: line.unit_price,
-            tax: line.tax_rate,
-            total: line.quantity * line.unit_price * (1 + line.tax_rate / 100),
-          })) || [],
-          subtotal: inv.total_amount - inv.tax_amount,
-          tax: inv.tax_amount,
-          total: inv.total_amount,
-          paid: inv.amount_paid,
-          status: inv.status === 'paid' ? 'paid' : inv.amount_paid > 0 ? 'partial' : inv.status as InvoiceStatus,
-        })));
+        setInvoices(invoicesRes.data.map(mapInvoiceFromBackend));
         
         // Map purchase orders
         setPurchaseOrders(purchaseOrdersRes.data.map((po): PurchaseOrder => ({
           id: po.id.toString(),
           orderNumber: po.order_number,
-          vendor: po.vendor?.name || 'Unknown',
+          vendor: getContactName(po.vendor_id, po.vendor?.name),
           vendorId: po.vendor_id.toString(),
           date: po.order_date,
           lineItems: po.lines?.map(line => ({
             id: line.id?.toString() || '',
             productId: line.product_id.toString(),
-            productName: 'Product ' + line.product_id,
+            productName: getProductName(line.product_id),
             quantity: line.quantity,
             unitPrice: line.unit_price,
             tax: line.tax_rate,
@@ -424,7 +487,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setVendorBills(vendorBillsRes.data.map((bill): VendorBill => ({
           id: bill.id.toString(),
           billNumber: bill.bill_number,
-          vendor: bill.vendor?.name || 'Unknown',
+          vendor: getContactName(bill.vendor_id, bill.vendor?.name),
           vendorId: bill.vendor_id.toString(),
           purchaseOrderId: bill.purchase_order_id?.toString(),
           billDate: bill.bill_date,
@@ -432,7 +495,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           lineItems: bill.lines?.map(line => ({
             id: line.id?.toString() || '',
             productId: line.product_id.toString(),
-            productName: line.description || 'Product ' + line.product_id,
+            productName: line.description || getProductName(line.product_id),
             quantity: line.quantity,
             unitPrice: line.unit_price,
             tax: line.tax_rate,
@@ -480,7 +543,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
     
     fetchData();
-  }, []);
+  }, [mapSalesOrder, mapInvoiceFromBackend]);
 
   // --- 2. WEBSOCKET REAL-TIME SYNC ---
   useEffect(() => {
@@ -537,8 +600,23 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         product_type: 'storable',
         image_url: product.images[0],
       });
-      const newProduct = mapBackendProduct(res.data);
+      // Map backend product and preserve the status/published from form
+      const baseProduct = mapBackendProduct(res.data);
+      const newProduct: AdminProduct = {
+        ...baseProduct,
+        status: product.status || 'new',
+        published: product.published ?? false,
+        category: product.category,
+        type: product.type,
+        material: product.material,
+        colors: product.colors,
+        salesTax: product.salesTax,
+        purchasePrice: product.purchasePrice,
+        purchaseTax: product.purchaseTax,
+        images: product.images.length > 0 ? product.images : baseProduct.images,
+      };
       setProducts(prev => [...prev, newProduct]);
+      productNameMapRef.current.set(newProduct.id, newProduct.name);
       toast.success('Product added successfully');
       return newProduct.id;
     } catch (error: any) {
@@ -558,6 +636,9 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         image_url: updates.images?.[0],
       });
       setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+      if (updates.name) {
+        productNameMapRef.current.set(id, updates.name);
+      }
       toast.success('Product updated successfully');
     } catch (error: any) {
       toast.error('Failed to update product: ' + (error.response?.data?.detail || error.message));
@@ -577,34 +658,33 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Sales Orders
   const addSalesOrder = async (o: Omit<SalesOrder, 'id'>) => {
     try {
-      const res = await salesOrdersApi.create({
-        customer_id: parseInt(o.customerId),
-        order_date: o.date,
-        lines: o.lineItems.map(item => ({
-          product_id: parseInt(item.productId),
+      const grossSubtotal = o.lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+      const totalDiscount = o.discount || 0;
+      const payloadLines = o.lineItems.map(item => {
+        const lineSubtotal = item.quantity * item.unitPrice;
+        const discountShare = grossSubtotal > 0 ? (lineSubtotal / grossSubtotal) * totalDiscount : 0;
+        return {
+          product_id: parseInt(item.productId, 10),
           quantity: item.quantity,
           unit_price: item.unitPrice,
           tax_rate: item.tax,
-          discount: 0,
-        })),
-        notes: '',
+          discount: Number(discountShare.toFixed(2)),
+        };
       });
-      const newOrder: SalesOrder = {
-        id: res.data.id.toString(),
-        orderNumber: res.data.order_number,
-        customer: o.customer,
-        customerId: o.customerId,
-        date: o.date,
-        lineItems: o.lineItems,
-        discount: o.discount,
-        subtotal: o.subtotal,
-        tax: o.tax,
-        total: o.total,
-        status: res.data.status as OrderStatus,
-      };
-      setSalesOrders(p => [...p, newOrder]);
+
+      const res = await salesOrdersApi.create({
+        customer_id: parseInt(o.customerId, 10),
+        order_date: o.date,
+        delivery_date: undefined,
+        lines: payloadLines,
+        notes: o.couponCode || undefined,
+      });
+
+      const fullOrder = await salesOrdersApi.getById(res.data.id);
+      const mappedOrder = mapSalesOrder(fullOrder.data);
+      setSalesOrders(p => [...p, mappedOrder]);
       toast.success('Sales order created successfully');
-      return newOrder.id;
+      return mappedOrder.id;
     } catch (error: any) {
       toast.error('Failed to create sales order: ' + (error.response?.data?.detail || error.message));
       return '';
@@ -626,38 +706,46 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Invoices
   const addInvoice = async (i: Omit<Invoice, 'id'>) => {
     try {
-      const res = await invoicesApi.create({
-        customer_id: parseInt(i.customerId),
-        sale_order_id: i.salesOrderId ? parseInt(i.salesOrderId) : undefined,
-        invoice_date: i.invoiceDate,
-        due_date: i.dueDate,
-        lines: i.lineItems.map(item => ({
-          product_id: parseInt(item.productId),
+      // Validate line items
+      if (!i.lineItems || i.lineItems.length === 0) {
+        toast.error('Cannot create invoice: No line items');
+        console.error('Invoice creation failed: lineItems is empty', i);
+        return '';
+      }
+
+      // Calculate discounted unit price so backend computes correct totals
+      const payloadLines = i.lineItems.map(item => {
+        const lineGross = item.quantity * item.unitPrice;
+        const lineDiscount = item.discount ?? 0;
+        // Distribute discount across units
+        const discountedUnitPrice = item.quantity > 0
+          ? (lineGross - lineDiscount) / item.quantity
+          : item.unitPrice;
+        return {
+          product_id: parseInt(item.productId, 10),
           description: item.productName,
           quantity: item.quantity,
-          unit_price: item.unitPrice,
+          unit_price: Number(discountedUnitPrice.toFixed(2)),
           tax_rate: item.tax,
-        })),
+        };
+      });
+
+      console.log('Creating invoice with lines:', payloadLines);
+
+      const res = await invoicesApi.create({
+        customer_id: parseInt(i.customerId, 10),
+        sale_order_id: i.salesOrderId ? parseInt(i.salesOrderId, 10) : undefined,
+        invoice_date: i.invoiceDate,
+        due_date: i.dueDate,
+        lines: payloadLines,
         notes: '',
       });
-      const newInvoice: Invoice = {
-        id: res.data.id.toString(),
-        invoiceNumber: res.data.invoice_number,
-        customer: i.customer,
-        customerId: i.customerId,
-        salesOrderId: i.salesOrderId,
-        invoiceDate: i.invoiceDate,
-        dueDate: i.dueDate,
-        lineItems: i.lineItems,
-        subtotal: i.subtotal,
-        tax: i.tax,
-        total: i.total,
-        paid: 0,
-        status: res.data.status as InvoiceStatus,
-      };
-      setInvoices(p => [...p, newInvoice]);
+
+      const fullInvoice = await invoicesApi.getById(res.data.id);
+      const mappedInvoice = mapInvoiceFromBackend(fullInvoice.data);
+      setInvoices(p => [...p, mappedInvoice]);
       toast.success('Invoice created successfully');
-      return newInvoice.id;
+      return mappedInvoice.id;
     } catch (error: any) {
       toast.error('Failed to create invoice: ' + (error.response?.data?.detail || error.message));
       return '';
@@ -674,6 +762,16 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       toast.success('Invoice updated successfully');
     } catch (error: any) {
       toast.error('Failed to update invoice: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const deleteInvoice = async (id: string) => {
+    try {
+      await invoicesApi.delete(parseInt(id));
+      setInvoices(p => p.filter(x => x.id !== id));
+      toast.success('Invoice deleted successfully');
+    } catch (error: any) {
+      toast.error('Failed to delete invoice: ' + (error.response?.data?.detail || error.message));
     }
   };
   
@@ -795,6 +893,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
       const newContact = mapBackendContact(res.data);
       setContacts(p => [...p, newContact]);
+      contactNameMapRef.current.set(newContact.id, newContact.name || 'Unknown');
       toast.success('Contact added successfully');
       return newContact.id;
     } catch (error: any) {
@@ -813,6 +912,9 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         contact_type: c.type as any,
       });
       setContacts(p => p.map(i => i.id === id ? {...i, ...c} : i));
+      if (c.name) {
+        contactNameMapRef.current.set(id, c.name);
+      }
       toast.success('Contact updated successfully');
     } catch (error: any) {
       toast.error('Failed to update contact: ' + (error.response?.data?.detail || error.message));
@@ -823,6 +925,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       await contactsApi.delete(parseInt(id));
       setContacts(p => p.filter(i => i.id !== id));
+      contactNameMapRef.current.delete(id);
       toast.success('Contact deleted successfully');
     } catch (error: any) {
       toast.error('Failed to delete contact: ' + (error.response?.data?.detail || error.message));
@@ -887,7 +990,7 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         products, addProduct, updateProduct, deleteProduct,
         salesOrders, addSalesOrder, updateSalesOrder,
-        invoices, addInvoice, updateInvoice,
+        invoices, addInvoice, updateInvoice, deleteInvoice,
         purchaseOrders, addPurchaseOrder, updatePurchaseOrder,
         vendorBills, addVendorBill, updateVendorBill,
         users, addUser, updateUser, deleteUser,

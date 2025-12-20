@@ -86,20 +86,26 @@ const UsersContacts = () => {
   const totalCustomers = internalUsers.length + portalUsers.length;
 
   // Filter users based on search
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-    user.phone.includes(userSearchQuery) ||
-    user.address.toLowerCase().includes(userSearchQuery.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const query = userSearchQuery.toLowerCase();
+    return (
+      (user.name || '').toLowerCase().includes(query) ||
+      (user.email || '').toLowerCase().includes(query) ||
+      (user.phone || '').includes(userSearchQuery) ||
+      (user.address || '').toLowerCase().includes(query)
+    );
+  });
 
   // Filter contacts based on search
-  const filteredContacts = contacts.filter(contact => 
-    contact.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
-    contact.email.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
-    contact.phone.includes(contactSearchQuery) ||
-    contact.address.toLowerCase().includes(contactSearchQuery.toLowerCase())
-  );
+  const filteredContacts = contacts.filter(contact => {
+    const query = contactSearchQuery.toLowerCase();
+    return (
+      (contact.name || '').toLowerCase().includes(query) ||
+      (contact.email || '').toLowerCase().includes(query) ||
+      (contact.phone || '').includes(contactSearchQuery) ||
+      (contact.address || '').toLowerCase().includes(query)
+    );
+  });
 
   const handleAddUser = () => {
     setEditingUser(null);

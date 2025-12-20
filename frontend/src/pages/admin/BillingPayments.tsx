@@ -18,6 +18,7 @@ import {
   CheckCircle,
   XCircle,
   Settings,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +55,7 @@ const BillingPayments = () => {
     contacts,
     updateSalesOrder,
     updateInvoice,
+    deleteInvoice,
     updateVendorBill,
     updatePurchaseOrder,
     addInvoice,
@@ -317,6 +319,8 @@ const BillingPayments = () => {
                             {order.status === 'confirmed' && (
                               <DropdownMenuItem onClick={async () => {
                                 // Create invoice from sales order
+                                console.log('Creating invoice from order:', order);
+                                console.log('Order lineItems:', order.lineItems);
                                 try {
                                   await addInvoice({
                                     customer: order.customer,
@@ -330,7 +334,7 @@ const BillingPayments = () => {
                                     tax: order.tax,
                                     total: order.total,
                                     paid: 0,
-                                    status: 'confirmed',
+                                    status: 'unpaid',
                                   });
                                   navigate(`/admin/billing`);
                                 } catch (error) {
@@ -465,6 +469,17 @@ const BillingPayments = () => {
                             }}>
                               <Send className="h-4 w-4 mr-2" />
                               Send
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={async () => {
+                                if (!window.confirm('Are you sure you want to delete this invoice?')) return;
+                                await deleteInvoice(invoice.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

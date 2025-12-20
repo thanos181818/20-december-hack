@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -43,6 +43,7 @@ interface LineItem {
   quantity: number;
   unitPrice: number;
   tax: number;
+  discount?: number;
   total: number;
 }
 
@@ -53,6 +54,17 @@ const SalesOrderForm = () => {
   const { salesOrders, addSalesOrder, updateSalesOrder, contacts, paymentTerms, products: adminProducts, addInvoice } = useAdminData();
   const isEditing = !!id;
   const existingOrder = isEditing ? salesOrders.find(o => o.id === id) : null;
+
+  const deriveDiscountPercent = (order: typeof existingOrder) => {
+    if (!order || !order.lineItems.length) {
+      return 0;
+    }
+    const grossSubtotal = order.lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
+    if (grossSubtotal === 0) {
+      return 0;
+    }
+    return Math.round(((order.discount || 0) / grossSubtotal) * 100);
+  };
   
   const [formData, setFormData] = useState({
     customer: existingOrder?.customerId || '',
@@ -62,7 +74,7 @@ const SalesOrderForm = () => {
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>(existingOrder?.lineItems || []);
-  const [couponDiscount, setCouponDiscount] = useState(existingOrder?.discount || 0);
+  const [couponDiscountPercent, setCouponDiscountPercent] = useState(deriveDiscountPercent(existingOrder));
 
   useEffect(() => {
     if (existingOrder) {
@@ -73,23 +85,45 @@ const SalesOrderForm = () => {
         couponCode: existingOrder.couponCode || '',
       });
       setLineItems(existingOrder.lineItems);
-      setCouponDiscount(existingOrder.discount);
+      setCouponDiscountPercent(deriveDiscountPercent(existingOrder));
     }
   }, [existingOrder]);
 
+  const computeLineTotals = useCallback((item: LineItem, discountPercent: number) => {
+    const lineSubtotal = item.quantity * item.unitPrice;
+    const lineDiscount = lineSubtotal * (discountPercent / 100);
+    const taxableBase = lineSubtotal - lineDiscount;
+    const taxAmount = taxableBase * (item.tax / 100);
+    return {
+      lineDiscount,
+      taxableBase,
+      taxAmount,
+      lineTotal: taxableBase + taxAmount,
+    };
+  }, []);
+
+  useEffect(() => {
+    setLineItems(items => items.map(item => {
+      const { lineDiscount, lineTotal } = computeLineTotals(item, couponDiscountPercent);
+      return { ...item, discount: lineDiscount, total: lineTotal };
+    }));
+  }, [couponDiscountPercent, computeLineTotals]);
+
   const addLineItem = () => {
-    setLineItems([
-      ...lineItems,
-      {
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-        productId: '',
-        productName: '',
-        quantity: 1,
-        unitPrice: 0,
-        tax: 18,
-        total: 0,
-      },
-    ]);
+    const item: LineItem = {
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+      productId: '',
+      productName: '',
+      quantity: 1,
+      unitPrice: 0,
+      tax: 18,
+      discount: 0,
+      total: 0,
+    };
+    const { lineDiscount, lineTotal } = computeLineTotals(item, couponDiscountPercent);
+    item.discount = lineDiscount;
+    item.total = lineTotal;
+    setLineItems([...lineItems, item]);
   };
 
   const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
@@ -108,9 +142,9 @@ const SalesOrderForm = () => {
           }
         }
         
-        // Recalculate total
-        const subtotal = updated.quantity * updated.unitPrice;
-        updated.total = subtotal + (subtotal * updated.tax / 100);
+        const { lineDiscount, lineTotal } = computeLineTotals(updated, couponDiscountPercent);
+        updated.discount = lineDiscount;
+        updated.total = lineTotal;
         
         return updated;
       })
@@ -123,20 +157,30 @@ const SalesOrderForm = () => {
 
   const applyCoupon = () => {
     if (formData.couponCode.toUpperCase() === 'SAVE10') {
-      setCouponDiscount(10);
+      setCouponDiscountPercent(10);
       toast.success('Coupon applied: 10% discount');
     } else if (formData.couponCode.toUpperCase() === 'SAVE20') {
-      setCouponDiscount(20);
+      setCouponDiscountPercent(20);
       toast.success('Coupon applied: 20% discount');
     } else {
       toast.error('Invalid coupon code');
     }
   };
 
-  const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const taxTotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.tax / 100), 0);
-  const discountAmount = subtotal * (couponDiscount / 100);
-  const grandTotal = subtotal + taxTotal - discountAmount;
+  const totals = lineItems.reduce((acc, item) => {
+    const { lineDiscount, taxableBase, taxAmount, lineTotal } = computeLineTotals(item, couponDiscountPercent);
+    acc.gross += item.quantity * item.unitPrice;
+    acc.discount += lineDiscount;
+    acc.subtotal += taxableBase;
+    acc.tax += taxAmount;
+    acc.total += lineTotal;
+    return acc;
+  }, { gross: 0, discount: 0, subtotal: 0, tax: 0, total: 0 });
+
+  const discountAmount = totals.discount;
+  const subtotal = totals.subtotal;
+  const taxTotal = totals.tax;
+  const grandTotal = totals.total;
 
   const handleSubmit = async (status: 'draft' | 'confirmed') => {
     if (!formData.customer) {
@@ -154,11 +198,6 @@ const SalesOrderForm = () => {
       return;
     }
 
-    const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    const taxTotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.tax / 100), 0);
-    const discountAmount = subtotal * (couponDiscount / 100);
-    const total = subtotal + taxTotal - discountAmount;
-
     try {
       if (isEditing && id) {
         await updateSalesOrder(id, {
@@ -168,15 +207,15 @@ const SalesOrderForm = () => {
           date: formData.date,
           lineItems,
           couponCode: formData.couponCode,
-          discount: couponDiscount,
+          discount: discountAmount,
           subtotal,
           tax: taxTotal,
-          total,
+          total: grandTotal,
           status,
         });
       } else {
         const orderNumber = `SO-${new Date().getFullYear()}-${String(Date.now()).slice(-3).padStart(3, '0')}`;
-        await addSalesOrder({
+        const newOrderId = await addSalesOrder({
           orderNumber,
           customer: customer.name || 'Unknown',
           customerId: customer.id,
@@ -184,12 +223,18 @@ const SalesOrderForm = () => {
           date: formData.date,
           lineItems,
           couponCode: formData.couponCode,
-          discount: couponDiscount,
+          discount: discountAmount,
           subtotal,
           tax: taxTotal,
-          total,
-        status,
-      });
+          total: grandTotal,
+          status,
+        });
+        if (!newOrderId) {
+          return;
+        }
+        if (status === 'confirmed') {
+          await updateSalesOrder(newOrderId, { status: 'confirmed' });
+        }
       }
       navigate('/admin/billing');
     } catch (error) {
@@ -460,9 +505,9 @@ const SalesOrderForm = () => {
                 />
                 <Button onClick={applyCoupon}>Apply</Button>
               </div>
-              {couponDiscount > 0 && (
+              {couponDiscountPercent > 0 && (
                 <p className="text-sm text-green-600 mt-2">
-                  {couponDiscount}% discount applied
+                  {couponDiscountPercent}% discount applied
                 </p>
               )}
             </CardContent>
@@ -481,9 +526,9 @@ const SalesOrderForm = () => {
                 <span className="text-muted-foreground">Tax</span>
                 <span>₹{taxTotal.toLocaleString()}</span>
               </div>
-              {couponDiscount > 0 && (
+              {couponDiscountPercent > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Discount ({couponDiscount}%)</span>
+                  <span>Discount ({couponDiscountPercent}%)</span>
                   <span>-₹{discountAmount.toLocaleString()}</span>
                 </div>
               )}

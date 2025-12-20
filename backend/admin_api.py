@@ -175,6 +175,135 @@ class PaymentTermUpdate(BaseModel):
     early_payment_discount: Optional[float] = None
     description: Optional[str] = None
 
+# ============= RESPONSE SCHEMAS (for nested relationships) =============
+
+class ContactResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    contact_type: str
+    
+    class Config:
+        from_attributes = True
+
+class SaleOrderLineResponse(BaseModel):
+    id: int
+    product_id: int
+    quantity: int
+    unit_price: float
+    tax_rate: float
+    discount: float
+    
+    class Config:
+        from_attributes = True
+
+class SaleOrderResponse(BaseModel):
+    id: int
+    order_number: str
+    customer_id: int
+    order_date: date
+    delivery_date: Optional[date] = None
+    total_amount: float
+    tax_amount: float
+    discount_amount: float
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    customer: Optional[ContactResponse] = None
+    lines: List[SaleOrderLineResponse] = []
+    
+    class Config:
+        from_attributes = True
+
+class InvoiceLineResponse(BaseModel):
+    id: int
+    product_id: int
+    description: Optional[str] = None
+    quantity: int
+    unit_price: float
+    tax_rate: float
+    
+    class Config:
+        from_attributes = True
+
+class InvoiceResponse(BaseModel):
+    id: int
+    invoice_number: str
+    sale_order_id: Optional[int] = None
+    customer_id: int
+    invoice_date: date
+    due_date: Optional[date] = None
+    total_amount: float
+    tax_amount: float
+    amount_paid: float
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    customer: Optional[ContactResponse] = None
+    lines: List[InvoiceLineResponse] = []
+    
+    class Config:
+        from_attributes = True
+
+class PurchaseOrderLineResponse(BaseModel):
+    id: int
+    product_id: int
+    quantity: int
+    unit_price: float
+    tax_rate: float
+    
+    class Config:
+        from_attributes = True
+
+class PurchaseOrderResponse(BaseModel):
+    id: int
+    order_number: str
+    vendor_id: int
+    order_date: date
+    expected_delivery: Optional[date] = None
+    total_amount: float
+    tax_amount: float
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    vendor: Optional[ContactResponse] = None
+    lines: List[PurchaseOrderLineResponse] = []
+    
+    class Config:
+        from_attributes = True
+
+class VendorBillLineResponse(BaseModel):
+    id: int
+    product_id: int
+    description: Optional[str] = None
+    quantity: int
+    unit_price: float
+    tax_rate: float
+    
+    class Config:
+        from_attributes = True
+
+class VendorBillResponse(BaseModel):
+    id: int
+    bill_number: str
+    purchase_order_id: Optional[int] = None
+    vendor_id: int
+    bill_date: date
+    due_date: Optional[date] = None
+    total_amount: float
+    tax_amount: float
+    amount_paid: float
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    vendor: Optional[ContactResponse] = None
+    lines: List[VendorBillLineResponse] = []
+    
+    class Config:
+        from_attributes = True
+
 # ============= HELPER FUNCTIONS =============
 
 def require_admin(current_user: User = Depends(get_current_user)):
@@ -366,7 +495,7 @@ async def delete_contact(
 
 # ============= SALES ORDER ENDPOINTS =============
 
-@router.get("/sales-orders")
+@router.get("/sales-orders", response_model=List[SaleOrderResponse])
 async def get_sales_orders(
     session: AsyncSession = Depends(get_session),
 ):
@@ -378,7 +507,7 @@ async def get_sales_orders(
     )
     return result.scalars().all()
 
-@router.get("/sales-orders/{order_id}")
+@router.get("/sales-orders/{order_id}", response_model=SaleOrderResponse)
 async def get_sales_order(
     order_id: int,
     session: AsyncSession = Depends(get_session),
@@ -469,7 +598,7 @@ async def delete_sales_order(
 
 # ============= INVOICE ENDPOINTS =============
 
-@router.get("/invoices")
+@router.get("/invoices", response_model=List[InvoiceResponse])
 async def get_invoices(
     session: AsyncSession = Depends(get_session),
 ):
@@ -481,7 +610,7 @@ async def get_invoices(
     )
     return result.scalars().all()
 
-@router.get("/invoices/{invoice_id}")
+@router.get("/invoices/{invoice_id}", response_model=InvoiceResponse)
 async def get_invoice(
     invoice_id: int,
     session: AsyncSession = Depends(get_session),
@@ -571,7 +700,7 @@ async def delete_invoice(
 
 # ============= PURCHASE ORDER ENDPOINTS =============
 
-@router.get("/purchase-orders")
+@router.get("/purchase-orders", response_model=List[PurchaseOrderResponse])
 async def get_purchase_orders(
     session: AsyncSession = Depends(get_session),
 ):
@@ -583,7 +712,7 @@ async def get_purchase_orders(
     )
     return result.scalars().all()
 
-@router.get("/purchase-orders/{order_id}")
+@router.get("/purchase-orders/{order_id}", response_model=PurchaseOrderResponse)
 async def get_purchase_order(
     order_id: int,
     session: AsyncSession = Depends(get_session),
@@ -674,7 +803,7 @@ async def delete_purchase_order(
 
 # ============= VENDOR BILL ENDPOINTS =============
 
-@router.get("/vendor-bills")
+@router.get("/vendor-bills", response_model=List[VendorBillResponse])
 async def get_vendor_bills(
     session: AsyncSession = Depends(get_session),
 ):
@@ -686,7 +815,7 @@ async def get_vendor_bills(
     )
     return result.scalars().all()
 
-@router.get("/vendor-bills/{bill_id}")
+@router.get("/vendor-bills/{bill_id}", response_model=VendorBillResponse)
 async def get_vendor_bill(
     bill_id: int,
     session: AsyncSession = Depends(get_session),

@@ -51,6 +51,18 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
 import { useAdminData } from '@/contexts/AdminDataContext';
 
+// Helper to compute current offer status based on dates
+const getOfferStatus = (offer: { startDate: string; endDate: string }): 'active' | 'upcoming' | 'expired' => {
+  const now = new Date();
+  const start = new Date(offer.startDate);
+  const end = new Date(offer.endDate);
+  // Set end to end of day
+  end.setHours(23, 59, 59, 999);
+  if (now < start) return 'upcoming';
+  if (now > end) return 'expired';
+  return 'active';
+};
+
 const PaymentTermsOffers = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const {
@@ -287,15 +299,17 @@ const PaymentTermsOffers = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Percent className="h-5 w-5" />
-                    Active Offers
+                    Offers
                   </CardTitle>
                   <Button size="sm" onClick={() => setActiveTab('offers')}>
                     View All
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{offers.filter(o => o.status === 'active').length}</p>
-                  <p className="text-sm text-muted-foreground">Currently running</p>
+                  <p className="text-3xl font-bold">{offers.length}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {offers.filter(o => getOfferStatus(o) === 'active').length} active
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -509,7 +523,9 @@ const PaymentTermsOffers = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {offers.map((offer) => (
+                  {offers.map((offer) => {
+                    const currentStatus = getOfferStatus(offer);
+                    return (
                     <TableRow key={offer.id}>
                       <TableCell className="font-medium">{offer.name}</TableCell>
                       <TableCell>{offer.discount}%</TableCell>
@@ -523,11 +539,11 @@ const PaymentTermsOffers = () => {
                       </TableCell>
                       <TableCell>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          offer.status === 'active' ? 'bg-green-100 text-green-700' :
-                          offer.status === 'upcoming' ? 'bg-blue-100 text-blue-700' :
+                          currentStatus === 'active' ? 'bg-green-100 text-green-700' :
+                          currentStatus === 'upcoming' ? 'bg-blue-100 text-blue-700' :
                           'bg-gray-100 text-gray-700'
                         }`}>
-                          {offer.status}
+                          {currentStatus}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -558,7 +574,8 @@ const PaymentTermsOffers = () => {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </Card>

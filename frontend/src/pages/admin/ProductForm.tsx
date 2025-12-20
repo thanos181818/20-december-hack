@@ -195,13 +195,13 @@ const ProductForm = () => {
               className="gap-2"
               onClick={() => {
                 if (isEditing && id) {
-                  const currentIndex = products.findIndex(p => p.id === id);
+                  const currentIndex = products.findIndex(p => String(p.id) === String(id));
                   if (currentIndex > 0) {
                     navigate(`/admin/products/${products[currentIndex - 1].id}`);
                   }
                 }
               }}
-              disabled={!isEditing || !id || products.findIndex(p => p.id === id) === 0}
+              disabled={!isEditing || !id || products.length === 0 || products.findIndex(p => String(p.id) === String(id)) <= 0}
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
@@ -212,13 +212,13 @@ const ProductForm = () => {
               className="gap-2"
               onClick={() => {
                 if (isEditing && id) {
-                  const currentIndex = products.findIndex(p => p.id === id);
-                  if (currentIndex < products.length - 1) {
+                  const currentIndex = products.findIndex(p => String(p.id) === String(id));
+                  if (currentIndex >= 0 && currentIndex < products.length - 1) {
                     navigate(`/admin/products/${products[currentIndex + 1].id}`);
                   }
                 }
               }}
-              disabled={!isEditing || !id || products.findIndex(p => p.id === id) === products.length - 1}
+              disabled={!isEditing || !id || products.length === 0 || products.findIndex(p => String(p.id) === String(id)) >= products.length - 1}
             >
               Next
               <ChevronRight className="h-4 w-4" />
@@ -231,7 +231,16 @@ const ProductForm = () => {
         </div>
 
         {/* Status Tabs */}
-        <Tabs value={status} onValueChange={(v) => setStatus(v as typeof status)}>
+        <Tabs value={status} onValueChange={(v) => {
+          const newStatus = v as typeof status;
+          setStatus(newStatus);
+          // Sync published toggle with status
+          if (newStatus === 'confirmed') {
+            setFormData(prev => ({ ...prev, published: true }));
+          } else {
+            setFormData(prev => ({ ...prev, published: false }));
+          }
+        }}>
           <TabsList>
             <TabsTrigger value="new">New</TabsTrigger>
             <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
@@ -484,7 +493,15 @@ const ProductForm = () => {
                   <Switch
                     id="published"
                     checked={formData.published}
-                    onCheckedChange={(checked) => setFormData({ ...formData, published: checked })}
+                    onCheckedChange={(checked) => {
+                      setFormData({ ...formData, published: checked });
+                      // If unpublishing, set status to 'new'; if publishing, set to 'confirmed'
+                      if (!checked && status === 'confirmed') {
+                        setStatus('new');
+                      } else if (checked && status === 'new') {
+                        setStatus('confirmed');
+                      }
+                    }}
                   />
                 </div>
               </CardContent>
