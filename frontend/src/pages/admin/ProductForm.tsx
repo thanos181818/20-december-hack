@@ -8,6 +8,7 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,7 @@ import { toast } from 'sonner';
 const categories = ['Men', 'Women', 'Children'];
 const types = ['Shirts', 'Pants', 'Kurtas', 'Dresses', 'Jackets'];
 const materials = ['Cotton', 'Linen', 'Silk', 'Wool', 'Polyester'];
-const colors = ['White', 'Black', 'Blue', 'Green', 'Red', 'Brown', 'Beige', 'Navy'];
+const presetColors = ['White', 'Black', 'Blue', 'Green', 'Red', 'Brown', 'Beige', 'Navy'];
 
 const ProductForm = () => {
   const { id } = useParams();
@@ -41,6 +42,8 @@ const ProductForm = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [status, setStatus] = useState<ProductStatus>(existingProduct?.status || 'new');
+  const [customColor, setCustomColor] = useState('#000000');
+  
   const [formData, setFormData] = useState({
     name: existingProduct?.name || '',
     category: existingProduct?.category || '',
@@ -107,7 +110,7 @@ const ProductForm = () => {
         ...formData,
         status,
         images,
-        price: formData.salesPrice, // FIXED: Added missing price property
+        price: formData.salesPrice,
       });
       toast.success('Product updated successfully');
     } else {
@@ -115,7 +118,7 @@ const ProductForm = () => {
         ...formData,
         status,
         images,
-        price: formData.salesPrice, // FIXED: Added missing price property
+        price: formData.salesPrice,
       });
       toast.success('Product created successfully');
     }
@@ -131,11 +134,20 @@ const ProductForm = () => {
     }));
   };
 
+  const addCustomColor = () => {
+    if (!formData.colors.includes(customColor)) {
+      setFormData(prev => ({
+        ...prev,
+        colors: [...prev.colors, customColor]
+      }));
+      toast.success(`Color ${customColor} added`);
+    }
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
       
-      // Convert files to Base64 for preview and storage
       files.forEach(file => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -274,23 +286,89 @@ const ProductForm = () => {
                 </Select>
               </div>
 
-              <div>
+              {/* Enhanced Color Section */}
+              <div className="space-y-3">
                 <Label>Colors</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {colors.map((color) => (
-                    <button
-                      key={color}
+                
+                {/* 1. Selected Colors List */}
+                <div className="flex flex-wrap gap-2 min-h-[2rem]">
+                  {formData.colors.length > 0 ? (
+                    formData.colors.map((color) => (
+                      <span
+                        key={color}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm border bg-secondary text-secondary-foreground border-border"
+                      >
+                        <span 
+                          className="w-3 h-3 rounded-full border border-black/10" 
+                          style={{ backgroundColor: color.toLowerCase() }}
+                        />
+                        {color}
+                        <button
+                          type="button"
+                          onClick={() => toggleColor(color)}
+                          className="hover:text-destructive transition-colors ml-1"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground italic">No colors selected</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/20">
+                  {/* 2. Custom Color Picker */}
+                  <div className="flex items-end gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Custom Color</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="color"
+                          value={customColor}
+                          onChange={(e) => setCustomColor(e.target.value)}
+                          className="w-12 h-9 p-1 cursor-pointer"
+                        />
+                        <Input 
+                          value={customColor}
+                          onChange={(e) => setCustomColor(e.target.value)}
+                          className="w-24 h-9 font-mono text-xs uppercase"
+                          maxLength={7}
+                        />
+                      </div>
+                    </div>
+                    <Button
                       type="button"
-                      onClick={() => toggleColor(color)}
-                      className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-                        formData.colors.includes(color)
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-muted border-border hover:border-primary'
-                      }`}
+                      size="sm"
+                      variant="secondary"
+                      onClick={addCustomColor}
+                      className="gap-1"
                     >
-                      {color}
-                    </button>
-                  ))}
+                      <Plus className="h-4 w-4" /> Add
+                    </Button>
+                  </div>
+
+                  {/* 3. Quick Add Presets */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Quick Add Presets</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {presetColors.map((color) => (
+                        <button
+                          key={color}
+                          type="button"
+                          disabled={formData.colors.includes(color)}
+                          onClick={() => toggleColor(color)}
+                          className={`px-3 py-1 rounded-full text-xs border transition-all ${
+                            formData.colors.includes(color)
+                              ? 'opacity-50 cursor-not-allowed bg-muted'
+                              : 'bg-background hover:border-primary hover:text-primary'
+                          }`}
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -371,11 +449,12 @@ const ProductForm = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t">
+                {/* Published Toggle */}
+                <div className="flex items-center justify-between pt-4 border-t mt-4">
                   <div>
-                    <Label htmlFor="published" className="text-base">Published</Label>
+                    <Label htmlFor="published" className="text-base font-medium">Published</Label>
                     <p className="text-sm text-muted-foreground">
-                      Make this product visible on the website
+                      Visible on website
                     </p>
                   </div>
                   <Switch
