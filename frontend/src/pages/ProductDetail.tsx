@@ -1,21 +1,118 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Minus, Plus, ShoppingBag, ArrowLeft, Check } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { products } from '@/data/products';
 import { useCart } from '@/contexts/CartContext';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+
+interface BackendProduct {
+  id: number;
+  name: string;
+  price: number;
+  current_stock: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  tax: number;
+  category: 'men' | 'women' | 'children';
+  type: string;
+  material: string;
+  colors: string[];
+  sizes: string[];
+  stock: number;
+  images: string[];
+  featured: boolean;
+  published: boolean;
+}
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const product = products.find(p => p.id === id);
   const { addItem } = useCart();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
-  const [selectedSize, setSelectedSize] = useState(product?.sizes[0] || '');
-  const [selectedColor, setSelectedColor] = useState(product?.colors[0] || '');
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const res = await api.get<BackendProduct[]>('/orders/products');
+        const backendProduct = res.data.find(p => p.id.toString() === id);
+        
+        if (backendProduct) {
+          // Generate 3 placeholder images for the carousel
+          const baseImage = `https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(backendProduct.name)}`;
+          const images = [
+            baseImage,
+            `https://placehold.co/600x800/d1d5db/374151?text=${encodeURIComponent(backendProduct.name + ' - Side')}`,
+            `https://placehold.co/600x800/c7d2fe/4338ca?text=${encodeURIComponent(backendProduct.name + ' - Back')}`,
+          ];
+          
+          const CATEGORIES = ['men', 'women', 'children'] as const;
+          const TYPES = ['shirts', 'pants', 'kurtas', 'dresses', 'jackets'];
+          const MATERIALS = ['cotton', 'silk', 'linen', 'wool', 'polyester'];
+          
+          const mappedProduct: Product = {
+            id: backendProduct.id.toString(),
+            name: backendProduct.name,
+            description: 'Premium quality apparel designed for comfort and style. Made with carefully selected materials for durability and a perfect fit.',
+            price: backendProduct.price,
+            tax: Math.round(backendProduct.price * 0.18),
+            stock: backendProduct.current_stock,
+            images,
+            category: CATEGORIES[backendProduct.id % 3],
+            type: TYPES[backendProduct.id % 5],
+            material: MATERIALS[backendProduct.id % 5],
+            colors: ['White', 'Blue', 'Black', 'Beige'],
+            sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+            featured: backendProduct.id % 2 === 0,
+            published: true,
+          };
+          
+          setProduct(mappedProduct);
+          setSelectedSize(mappedProduct.sizes[0]);
+          setSelectedColor(mappedProduct.colors[0]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch product', error);
+        toast.error('Could not load product details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <div className="animate-pulse">
+            <div className="h-8 w-48 bg-muted rounded mx-auto mb-4"></div>
+            <div className="h-4 w-32 bg-muted rounded mx-auto"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!product) {
     return (
@@ -93,14 +190,46 @@ const ProductDetail = () => {
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-            {/* Images */}
+            {/* Images Carousel */}
             <div className="space-y-4">
-              <div className="aspect-square bg-muted rounded-xl overflow-hidden">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                />
+              {/* Main Carousel */}
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {product.images.map((image, index) => (
+                    <CarouselItem key={index}>
+                      <div className="aspect-square bg-muted rounded-xl overflow-hidden">
+                        <img
+                          src={image}
+                          alt={`${product.name} - View ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="left-2" />
+                <CarouselNext className="right-2" />
+              </Carousel>
+
+              {/* Thumbnail Navigation */}
+              <div className="flex gap-3 justify-center">
+                {product.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedImageIndex === index
+                        ? 'border-primary ring-2 ring-primary/30'
+                        : 'border-transparent hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt={`Thumbnail ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
               </div>
             </div>
 

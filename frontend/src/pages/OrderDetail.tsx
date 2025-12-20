@@ -1,78 +1,68 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Package, Truck, CheckCircle, Clock } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { products } from '@/data/products';
+import { api } from '@/lib/api';
 
-// Mock order data with product details
-const mockOrderDetails: Record<string, {
+interface OrderItem {
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+  total: number;
+}
+
+interface OrderData {
   id: string;
+  orderNumber: string;
   date: string;
-  status: 'Processing' | 'Shipped' | 'Delivered';
+  status: string;
   total: number;
   subtotal: number;
   tax: number;
   discount: number;
-  shippingAddress: {
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-    pincode: string;
-  };
-  items: {
-    productId: string;
-    quantity: number;
-    price: number;
-    size: string;
-    color: string;
-  }[];
-}> = {
-  'ORD-001': {
-    id: 'ORD-001',
-    date: '2024-01-15',
-    status: 'Delivered',
-    total: 5998,
-    subtotal: 5498,
-    tax: 500,
-    discount: 0,
-    shippingAddress: {
-      name: 'John Doe',
-      address: '123 Main Street',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
-    },
-    items: [
-      { productId: '1', quantity: 1, price: 2499, size: 'M', color: 'Blue' },
-      { productId: '2', quantity: 1, price: 4999, size: 'L', color: 'Maroon' },
-    ],
-  },
-  'ORD-002': {
-    id: 'ORD-002',
-    date: '2024-01-10',
-    status: 'Processing',
-    total: 2499,
-    subtotal: 2049,
-    tax: 450,
-    discount: 0,
-    shippingAddress: {
-      name: 'John Doe',
-      address: '123 Main Street',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
-    },
-    items: [
-      { productId: '1', quantity: 1, price: 2499, size: 'L', color: 'White' },
-    ],
-  },
-};
+  customerName: string;
+  customerAddress: string;
+  items: OrderItem[];
+}
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const order = id ? mockOrderDetails[id] : null;
+  const [order, setOrder] = useState<OrderData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchOrder = async () => {
+      try {
+        const res = await api.get(`/orders/order/${id}`);
+        const data = res.data;
+        
+        setOrder({
+          id: data.id.toString(),
+          orderNumber: data.order_number,
+          date: data.order_date || new Date().toISOString().split('T')[0],
+          status: data.status.charAt(0).toUpperCase() + data.status.slice(1),
+          total: data.total_amount,
+          subtotal: data.total_amount * 0.85,
+          tax: data.total_amount * 0.15,
+          discount: data.discount_amount || 0,
+          customerName: data.customer_name || 'Customer',
+          customerAddress: data.customer_address || 'Address not provided',
+          items: data.items || [],
+        });
+      } catch (error) {
+        console.error('Failed to fetch order', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchOrder();
+    }
+  }, [id]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -94,15 +84,31 @@ const OrderDetail = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Delivered':
+    switch (status.toLowerCase()) {
+      case 'delivered':
+      case 'confirmed':
         return 'bg-green-100 text-green-700';
-      case 'Shipped':
+      case 'shipped':
         return 'bg-blue-100 text-blue-700';
+      case 'cancelled':
+        return 'bg-red-100 text-red-700';
       default:
         return 'bg-amber-100 text-amber-700';
     }
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <div className="animate-pulse">
+            <div className="h-8 w-48 bg-muted rounded mx-auto mb-4"></div>
+            <div className="h-4 w-32 bg-muted rounded mx-auto"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!order) {
     return (
@@ -129,7 +135,7 @@ const OrderDetail = () => {
   return (
     <>
       <Helmet>
-        <title>{`Order ${order.id} | ApparelDesk`}</title>
+        <title>{`Order ${order.orderNumber} | ApparelDesk`}</title>
       </Helmet>
       <Layout>
         <div className="bg-muted/30 py-8 lg:py-12">
@@ -144,7 +150,7 @@ const OrderDetail = () => {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="font-display text-3xl lg:text-4xl font-bold text-foreground">
-                  Order {order.id}
+                  Order {order.orderNumber}
                 </h1>
                 <p className="text-muted-foreground mt-1">
                   Placed on {new Date(order.date).toLocaleDateString('en-IN', {
@@ -171,55 +177,42 @@ const OrderDetail = () => {
                   <h2 className="font-display text-lg font-semibold">Order Items</h2>
                 </div>
                 <div className="divide-y divide-border">
-                  {order.items.map((item, index) => {
-                    const product = products.find(p => p.id === item.productId);
-                    if (!product) return null;
-                    return (
-                      <div key={index} className="p-6 flex gap-4">
-                        <div className="w-20 h-20 bg-muted rounded-md overflow-hidden flex-shrink-0">
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                          />
+                  {order.items.map((item, index) => (
+                    <div key={index} className="p-6 flex gap-4">
+                      <div className="w-20 h-20 bg-muted rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <Package className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          to={`/products/${item.product_id}`}
+                          className="font-medium text-foreground hover:text-primary"
+                        >
+                          {item.product_name}
+                        </Link>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Qty: {item.quantity}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold text-foreground">
+                          {formatPrice(item.total)}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <Link
-                            to={`/products/${product.id}`}
-                            className="font-medium text-foreground hover:text-primary"
-                          >
-                            {product.name}
-                          </Link>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Size: {item.size} • Color: {item.color}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Qty: {item.quantity}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-foreground">
-                            {formatPrice(item.price * item.quantity)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatPrice(item.price)} each
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          {formatPrice(item.unit_price)} each
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Shipping Address */}
+              {/* Customer Info */}
               <div className="bg-card rounded-lg shadow-soft p-6">
-                <h2 className="font-display text-lg font-semibold mb-4">Shipping Address</h2>
+                <h2 className="font-display text-lg font-semibold mb-4">Customer Information</h2>
                 <div className="text-foreground">
-                  <p className="font-medium">{order.shippingAddress.name}</p>
+                  <p className="font-medium">{order.customerName}</p>
                   <p className="text-muted-foreground mt-1">
-                    {order.shippingAddress.address}
-                    <br />
-                    {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pincode}
+                    {order.customerAddress}
                   </p>
                 </div>
               </div>

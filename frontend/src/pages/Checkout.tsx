@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { CreditCard, Lock } from 'lucide-react';
@@ -17,6 +17,16 @@ const Checkout = () => {
   const { items, subtotal, taxTotal, discount, total, clearCart } = useCart();
   const { isAuthenticated, user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
+
+  // Form refs for shipping address
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const cityRef = useRef<HTMLInputElement>(null);
+  const stateRef = useRef<HTMLInputElement>(null);
+  const pincodeRef = useRef<HTMLInputElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -52,11 +62,44 @@ const Checkout = () => {
       };
 
       // 2. Call API (Transactional Endpoint)
-      await api.post('/orders/', orderPayload);
+      const response = await api.post('/orders/', orderPayload);
+
+      // Get order details from response
+      const orderData = response.data;
+
+      // Prepare order confirmation data
+      const confirmationData = {
+        orderId: orderData.order_id,
+        orderNumber: orderData.order_number,
+        total: orderData.total || total,
+        items: items.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          size: item.size,
+          color: item.color,
+        })),
+        shippingAddress: {
+          firstName: firstNameRef.current?.value || '',
+          lastName: lastNameRef.current?.value || '',
+          address: addressRef.current?.value || '',
+          city: cityRef.current?.value || '',
+          state: stateRef.current?.value || '',
+          pincode: pincodeRef.current?.value || '',
+          phone: phoneRef.current?.value || '',
+        },
+      };
 
       toast.success('Order placed successfully! Inventory updated.');
+      
+      // Set flag to prevent redirect on cart clear
+      setOrderComplete(true);
       clearCart();
-      navigate('/dashboard');
+      
+      // Navigate to order confirmation page with order data
+      navigate('/order-confirmation', { state: confirmationData, replace: true });
     } catch (error) {
       console.error("Checkout failed:", error);
       
@@ -78,7 +121,7 @@ const Checkout = () => {
     }
   };
 
-  if (items.length === 0) {
+  if (items.length === 0 && !orderComplete) {
     navigate('/cart');
     return null;
   }
@@ -119,7 +162,7 @@ const Checkout = () => {
                     </div>
                     <div>
                       <Label htmlFor="phone">Phone Number</Label>
-                      <Input id="phone" type="tel" placeholder="+91 98765 43210" required />
+                      <Input id="phone" type="tel" placeholder="+91 98765 43210" required ref={phoneRef} />
                     </div>
                   </div>
                 </div>
@@ -131,29 +174,29 @@ const Checkout = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="firstName">First Name</Label>
-                        <Input id="firstName" required />
+                        <Input id="firstName" required ref={firstNameRef} />
                       </div>
                       <div>
                         <Label htmlFor="lastName">Last Name</Label>
-                        <Input id="lastName" required />
+                        <Input id="lastName" required ref={lastNameRef} />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="address">Address</Label>
-                      <Input id="address" placeholder="Street address" required />
+                      <Input id="address" placeholder="Street address" required ref={addressRef} />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <Label htmlFor="city">City</Label>
-                        <Input id="city" required />
+                        <Input id="city" required ref={cityRef} />
                       </div>
                       <div>
                         <Label htmlFor="state">State</Label>
-                        <Input id="state" required />
+                        <Input id="state" required ref={stateRef} />
                       </div>
                       <div>
                         <Label htmlFor="pincode">PIN Code</Label>
-                        <Input id="pincode" required />
+                        <Input id="pincode" required ref={pincodeRef} />
                       </div>
                     </div>
                   </div>

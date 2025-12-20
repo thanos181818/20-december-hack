@@ -132,3 +132,147 @@ async def get_products(session: AsyncSession = Depends(get_session)):
     # --- FIX: Use session.execute and scalars().all() ---
     result = await session.execute(select(Product))
     return result.scalars().all()
+
+
+# --- User Orders & Invoices ---
+@router.get("/my-orders")
+async def get_my_orders(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get all orders for the current logged-in user."""
+    if not current_user.contact_id:
+        return []
+    
+    result = await session.execute(
+        select(SaleOrder).where(SaleOrder.customer_id == current_user.contact_id).order_by(SaleOrder.id.desc())
+    )
+    orders = result.scalars().all()
+    
+    return [
+        {
+            "id": order.id,
+            "order_number": order.order_number,
+            "total_amount": order.total_amount,
+            "status": order.status,
+            "order_date": order.order_date.isoformat() if order.order_date else None,
+        }
+        for order in orders
+    ]
+
+
+@router.get("/my-invoices")
+async def get_my_invoices(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get all invoices for the current logged-in user."""
+    if not current_user.contact_id:
+        return []
+    
+    result = await session.execute(
+        select(Invoice).where(Invoice.customer_id == current_user.contact_id).order_by(Invoice.id.desc())
+    )
+    invoices = result.scalars().all()
+    
+    return [
+        {
+            "id": invoice.id,
+            "invoice_number": invoice.invoice_number,
+            "total_amount": invoice.total_amount,
+            "status": invoice.status,
+            "invoice_date": invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+            "sale_order_id": invoice.sale_order_id,
+        }
+        for invoice in invoices
+    ]
+
+
+@router.get("/invoice/{invoice_id}")
+async def get_invoice_detail(
+    invoice_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get a specific invoice by ID."""
+    invoice = await session.get(Invoice, invoice_id)
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    # Verify the invoice belongs to the current user
+    if invoice.customer_id != current_user.contact_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get customer info
+    from backend.models import Contact
+    customer = await session.get(Contact, invoice.customer_id)
+    
+    return {
+        "id": invoice.id,
+        "invoice_number": invoice.invoice_number,
+        "sale_order_id": invoice.sale_order_id,
+        "invoice_date": invoice.invoice_date.isoformat() if invoice.invoice_date else None,
+        "due_date": invoice.due_date.isoformat() if invoice.due_date else None,
+        "total_amount": invoice.total_amount,
+        "tax_amount": invoice.tax_amount,
+        "amount_paid": invoice.amount_paid,
+        "status": invoice.status,
+        "customer_name": customer.name if customer else "Customer",
+        "customer_email": customer.email if customer else "",
+        "customer_phone": customer.phone if customer else "",
+        "customer_address": customer.address if customer else "",
+    }
+
+
+@router.get("/order/{order_id}")
+async def get_order_detail(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session)
+):
+    """Get a specific order by ID."""
+    order = await session.get(SaleOrder, order_id)
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Verify the order belongs to the current user
+    if order.customer_id != current_user.contact_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # Get order lines
+    result = await session.execute(
+        select(SaleOrderLine).where(SaleOrderLine.order_id == order_id)
+    )
+    lines = result.scalars().all()
+    
+    # Get customer info
+    from backend.models import Contact
+    customer = await session.get(Contact, order.customer_id)
+    
+    items = []
+    for line in lines:
+        product = await session.get(Product, line.product_id)
+        items.append({
+            "product_id": line.product_id,
+            "product_name": product.name if product else "Unknown Product",
+            "quantity": line.quantity,
+            "unit_price": line.unit_price,
+            "total": line.quantity * line.unit_price,
+        })
+    
+    return {
+        "id": order.id,
+        "order_number": order.order_number,
+        "order_date": order.order_date.isoformat() if order.order_date else None,
+        "total_amount": order.total_amount,
+        "tax_amount": order.tax_amount,
+        "discount_amount": order.discount_amount,
+        "status": order.status,
+        "customer_name": customer.name if customer else "Customer",
+        "customer_email": customer.email if customer else "",
+        "customer_phone": customer.phone if customer else "",
+        "customer_address": customer.address if customer else "",
+        "items": items,
+    }

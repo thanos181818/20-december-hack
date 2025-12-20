@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Mail, Lock, User, ArrowRight, ShoppingBag } from 'lucide-react';
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 const CustomerLogin = () => {
   const navigate = useNavigate();
-  const { login, signup, isAuthenticated } = useAuth();
+  const { login, signup, isAuthenticated, isAdmin } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -22,8 +22,18 @@ const CustomerLogin = () => {
     confirmPassword: '',
   });
 
+  // Redirect based on user role
+  useEffect(() => {
+    if (isAuthenticated) {
+      if (isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [isAuthenticated, isAdmin, navigate]);
+
   if (isAuthenticated) {
-    navigate('/dashboard');
     return null;
   }
 
@@ -60,7 +70,7 @@ const CustomerLogin = () => {
 
       if (success) {
         toast.success(isLogin ? 'Welcome back!' : 'Account created successfully!');
-        navigate('/');
+        // Navigation will be handled by useEffect based on role
       } else {
         toast.error('Authentication failed. Please try again.');
       }

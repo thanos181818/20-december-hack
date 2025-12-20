@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag, User, Menu, X, Search } from 'lucide-react';
+import { ShoppingBag, User, Menu, X, Search, Shield } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { itemCount } = useCart();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, isAdmin, user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
@@ -57,12 +57,21 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="hidden lg:flex items-center gap-4">
-                <Link to="/dashboard">
-                  <Button variant="ghost" className="gap-2">
-                    <User className="h-5 w-5" />
-                    <span className="hidden xl:inline">{user?.name}</span>
-                  </Button>
-                </Link>
+                {isAdmin ? (
+                  <Link to="/admin">
+                    <Button variant="ghost" className="gap-2">
+                      <Shield className="h-5 w-5" />
+                      <span className="hidden xl:inline">Admin Panel</span>
+                    </Button>
+                  </Link>
+                ) : (
+                  <Link to="/dashboard">
+                    <Button variant="ghost" className="gap-2">
+                      <User className="h-5 w-5" />
+                      <span className="hidden xl:inline">{user?.name}</span>
+                    </Button>
+                  </Link>
+                )}
                 <Button variant="ghost" onClick={logout} className="text-muted-foreground">
                   Logout
                 </Button>
@@ -134,13 +143,25 @@ const Navbar = () => {
               <div className="border-t border-border my-2" />
               {isAuthenticated ? (
                 <>
-                  <Link
-                    to="/dashboard"
-                    className="px-4 py-3 text-foreground/80 hover:bg-muted rounded-md transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
+                  {isAdmin ? (
+                    <Link
+                      to="/admin"
+                      className="px-4 py-3 text-foreground/80 hover:bg-muted rounded-md transition-colors flex items-center gap-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Shield className="h-4 w-4" />
+                      Admin Panel
+                    </Link>
+                  ) : (
+                    <Link
+                      to="/dashboard"
+                      className="px-4 py-3 text-foreground/80 hover:bg-muted rounded-md transition-colors flex items-center gap-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <User className="h-4 w-4" />
+                      My Account
+                    </Link>
+                  )}
                   <button
                     onClick={() => {
                       logout();

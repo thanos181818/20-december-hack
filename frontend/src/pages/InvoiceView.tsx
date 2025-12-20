@@ -1,17 +1,18 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Download, FileText, Printer } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { products } from '@/data/products';
+import { api } from '@/lib/api';
 
-// Mock invoice data
-const mockInvoiceDetails: Record<string, {
+interface InvoiceData {
   id: string;
+  invoiceNumber: string;
   orderId: string;
   date: string;
   dueDate: string;
-  status: 'Paid' | 'Pending';
+  status: string;
   subtotal: number;
   tax: number;
   discount: number;
@@ -32,62 +33,86 @@ const mockInvoiceDetails: Record<string, {
     price: number;
     tax: number;
   }[];
-}> = {
-  'INV-001': {
-    id: 'INV-001',
-    orderId: 'ORD-001',
-    date: '2024-01-15',
-    dueDate: '2024-01-15',
-    status: 'Paid',
-    subtotal: 7498,
-    tax: 1350,
-    discount: 0,
-    total: 5998,
-    billingAddress: {
-      name: 'John Doe',
-      address: '123 Main Street',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
-      email: 'john@example.com',
-      phone: '+91 98765 43210',
-    },
-    items: [
-      { productId: '1', description: 'Classic Cotton Shirt - Size M, Blue', quantity: 1, price: 2499, tax: 450 },
-      { productId: '2', description: 'Silk Blend Kurta - Size L, Maroon', quantity: 1, price: 4999, tax: 900 },
-    ],
-  },
-  'INV-002': {
-    id: 'INV-002',
-    orderId: 'ORD-002',
-    date: '2024-01-10',
-    dueDate: '2024-01-25',
-    status: 'Pending',
-    subtotal: 2499,
-    tax: 450,
-    discount: 0,
-    total: 2499,
-    billingAddress: {
-      name: 'John Doe',
-      address: '123 Main Street',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
-      email: 'john@example.com',
-      phone: '+91 98765 43210',
-    },
-    items: [
-      { productId: '1', description: 'Classic Cotton Shirt - Size L, White', quantity: 1, price: 2499, tax: 450 },
-    ],
-  },
-};
+}
 
 const InvoiceView = () => {
   const { id } = useParams<{ id: string }>();
-  // Support both invoice ID and order ID lookup
-  const invoice = id 
-    ? mockInvoiceDetails[id] || Object.values(mockInvoiceDetails).find(inv => inv.orderId === id)
-    : null;
+  const [invoice, setInvoice] = useState<InvoiceData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      try {
+        // Try to fetch invoice from backend
+        const res = await api.get(`/orders/invoice/${id}`);
+        const data = res.data;
+        
+        setInvoice({
+          id: data.id.toString(),
+          invoiceNumber: data.invoice_number,
+          orderId: data.sale_order_id?.toString() || '',
+          date: data.invoice_date,
+          dueDate: data.due_date || data.invoice_date,
+          status: data.status.charAt(0).toUpperCase() + data.status.slice(1),
+          subtotal: data.total_amount * 0.85,
+          tax: data.total_amount * 0.15,
+          discount: 0,
+          total: data.total_amount,
+          billingAddress: {
+            name: data.customer_name || 'Customer',
+            address: data.customer_address || 'Address not provided',
+            city: 'City',
+            state: 'State',
+            pincode: '000000',
+            email: data.customer_email || '',
+            phone: data.customer_phone || '',
+          },
+          items: data.items || [
+            {
+              productId: '1',
+              description: 'Order Items',
+              quantity: 1,
+              price: data.total_amount * 0.85,
+              tax: data.total_amount * 0.15,
+            }
+          ],
+        });
+      } catch (error) {
+        console.error('Failed to fetch invoice', error);
+        // Fallback to mock data for demo
+        setInvoice({
+          id: id || 'INV-001',
+          invoiceNumber: id || 'INV-001',
+          orderId: 'ORD-001',
+          date: new Date().toISOString().split('T')[0],
+          dueDate: new Date().toISOString().split('T')[0],
+          status: 'Paid',
+          subtotal: 2499,
+          tax: 450,
+          discount: 0,
+          total: 2949,
+          billingAddress: {
+            name: 'Customer',
+            address: 'Address',
+            city: 'City',
+            state: 'State',
+            pincode: '000000',
+            email: 'customer@email.com',
+            phone: '+91 98765 43210',
+          },
+          items: [
+            { productId: '1', description: 'Product Item', quantity: 1, price: 2499, tax: 450 },
+          ],
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchInvoice();
+    }
+  }, [id]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -105,6 +130,19 @@ const InvoiceView = () => {
     // In a real app, this would generate a PDF
     alert('PDF download would be triggered here. In production, use a library like jsPDF.');
   };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-16 text-center">
+          <div className="animate-pulse">
+            <div className="h-8 w-48 bg-muted rounded mx-auto mb-4"></div>
+            <div className="h-4 w-32 bg-muted rounded mx-auto"></div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!invoice) {
     return (
@@ -131,7 +169,7 @@ const InvoiceView = () => {
   return (
     <>
       <Helmet>
-        <title>{`Invoice ${invoice.id} | ApparelDesk`}</title>
+        <title>{`Invoice ${invoice.invoiceNumber} | ApparelDesk`}</title>
       </Helmet>
       <Layout>
         <div className="bg-muted/30 py-8 lg:py-12 print:hidden">
@@ -145,7 +183,7 @@ const InvoiceView = () => {
             </Link>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h1 className="font-display text-3xl lg:text-4xl font-bold text-foreground">
-                Invoice {invoice.id}
+                Invoice {invoice.invoiceNumber}
               </h1>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={handlePrint} className="gap-2">
@@ -178,12 +216,12 @@ const InvoiceView = () => {
                 <div className="text-left sm:text-right">
                   <div className="text-2xl font-bold text-foreground">INVOICE</div>
                   <div className="mt-2 space-y-1 text-sm">
-                    <p><span className="text-muted-foreground">Invoice #:</span> <span className="font-medium">{invoice.id}</span></p>
+                    <p><span className="text-muted-foreground">Invoice #:</span> <span className="font-medium">{invoice.invoiceNumber}</span></p>
                     <p><span className="text-muted-foreground">Date:</span> <span className="font-medium">{new Date(invoice.date).toLocaleDateString('en-IN')}</span></p>
-                    <p><span className="text-muted-foreground">Order #:</span> <span className="font-medium">{invoice.orderId}</span></p>
+                    {invoice.orderId && <p><span className="text-muted-foreground">Order #:</span> <span className="font-medium">{invoice.orderId}</span></p>}
                   </div>
                   <div className={`inline-flex mt-3 px-3 py-1 rounded-full text-sm font-medium ${
-                    invoice.status === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                    invoice.status.toLowerCase() === 'paid' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {invoice.status}
                   </div>
