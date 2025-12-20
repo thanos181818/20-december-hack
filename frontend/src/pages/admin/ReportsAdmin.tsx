@@ -33,45 +33,73 @@ import { toast } from 'sonner';
 
 // Mock data
 const salesByProduct = [
-  { product: 'Premium Cotton Shirt', quantity: 156, untaxed: 234000, tax: 42120, total: 276120, paid: 250000 },
-  { product: 'Linen Kurta Set', quantity: 89, untaxed: 178000, tax: 32040, total: 210040, paid: 210040 },
-  { product: 'Formal Blazer', quantity: 45, untaxed: 225000, tax: 40500, total: 265500, paid: 200000 },
-  { product: 'Cotton Pants', quantity: 234, untaxed: 280800, tax: 50544, total: 331344, paid: 331344 },
+  { product: 'Premium Cotton Shirt', quantity: 156, untaxed: 234000, tax: 42120, total: 276120, paid: 250000, startDate: '2025-01-05', endDate: '2025-01-25' },
+  { product: 'Linen Kurta Set', quantity: 89, untaxed: 178000, tax: 32040, total: 210040, paid: 210040, startDate: '2025-01-10', endDate: '2025-01-28' },
+  { product: 'Formal Blazer', quantity: 45, untaxed: 225000, tax: 40500, total: 265500, paid: 200000, startDate: '2025-01-15', endDate: '2025-01-30' },
+  { product: 'Cotton Pants', quantity: 234, untaxed: 280800, tax: 50544, total: 331344, paid: 331344, startDate: '2025-01-01', endDate: '2025-01-31' },
 ];
 
 const salesByCustomer = [
-  { customer: 'John Doe', orders: 12, untaxed: 45000, tax: 8100, total: 53100, paid: 53100 },
-  { customer: 'Jane Smith', orders: 8, untaxed: 32000, tax: 5760, total: 37760, paid: 30000 },
-  { customer: 'Mike Johnson', orders: 15, untaxed: 78000, tax: 14040, total: 92040, paid: 92040 },
-  { customer: 'Sarah Williams', orders: 5, untaxed: 18500, tax: 3330, total: 21830, paid: 15000 },
+  { customer: 'John Doe', orders: 12, untaxed: 45000, tax: 8100, total: 53100, paid: 53100, startDate: '2025-01-03', endDate: '2025-01-29' },
+  { customer: 'Jane Smith', orders: 8, untaxed: 32000, tax: 5760, total: 37760, paid: 30000, startDate: '2025-01-08', endDate: '2025-01-26' },
+  { customer: 'Mike Johnson', orders: 15, untaxed: 78000, tax: 14040, total: 92040, paid: 92040, startDate: '2025-01-02', endDate: '2025-01-30' },
+  { customer: 'Sarah Williams', orders: 5, untaxed: 18500, tax: 3330, total: 21830, paid: 15000, startDate: '2025-01-12', endDate: '2025-01-27' },
 ];
 
 const purchasesByVendor = [
-  { vendor: 'ABC Textiles', orders: 8, untaxed: 180000, tax: 21600, total: 201600, paid: 201600 },
-  { vendor: 'XYZ Fabrics', orders: 5, untaxed: 125000, tax: 15000, total: 140000, paid: 100000 },
-  { vendor: 'Cotton Mills Ltd', orders: 3, untaxed: 95000, tax: 11400, total: 106400, paid: 106400 },
+  { vendor: 'ABC Textiles', orders: 8, untaxed: 180000, tax: 21600, total: 201600, paid: 201600, startDate: '2025-01-05', endDate: '2025-01-28' },
+  { vendor: 'XYZ Fabrics', orders: 5, untaxed: 125000, tax: 15000, total: 140000, paid: 100000, startDate: '2025-01-10', endDate: '2025-01-25' },
+  { vendor: 'Cotton Mills Ltd', orders: 3, untaxed: 95000, tax: 11400, total: 106400, paid: 106400, startDate: '2025-01-15', endDate: '2025-01-30' },
 ];
 
 const purchasesByProduct = [
-  { product: 'Cotton Fabric (meters)', quantity: 5000, untaxed: 250000, tax: 30000, total: 280000, paid: 280000 },
-  { product: 'Linen Fabric (meters)', quantity: 2000, untaxed: 180000, tax: 21600, total: 201600, paid: 150000 },
-  { product: 'Buttons (packs)', quantity: 500, untaxed: 25000, tax: 3000, total: 28000, paid: 28000 },
+  { product: 'Cotton Fabric (meters)', quantity: 5000, untaxed: 250000, tax: 30000, total: 280000, paid: 280000, startDate: '2025-01-01', endDate: '2025-01-20' },
+  { product: 'Linen Fabric (meters)', quantity: 2000, untaxed: 180000, tax: 21600, total: 201600, paid: 150000, startDate: '2025-01-08', endDate: '2025-01-28' },
+  { product: 'Buttons (packs)', quantity: 500, untaxed: 25000, tax: 3000, total: 28000, paid: 28000, startDate: '2025-01-12', endDate: '2025-01-31' },
 ];
 
 const ReportsAdmin = () => {
   const [reportType, setReportType] = useState('sales');
   const [groupBy, setGroupBy] = useState('product');
-  const [fromDate, setFromDate] = useState('2024-01-01');
-  const [toDate, setToDate] = useState('2024-01-31');
+  
+  // Get current date and first day of current month
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  
+  const [fromDate, setFromDate] = useState(firstDayOfMonth.toISOString().split('T')[0]);
+  const [toDate, setToDate] = useState(today.toISOString().split('T')[0]);
 
-  const getData = () => {
+  const getRawData = () => {
     if (reportType === 'sales') {
       return groupBy === 'product' ? salesByProduct : salesByCustomer;
     }
     return groupBy === 'product' ? purchasesByProduct : purchasesByVendor;
   };
 
-  const data = getData();
+  const filterByDate = (data: any[]) => {
+    if (!fromDate && !toDate) return data;
+    
+    return data.filter(item => {
+      const itemStartDate = new Date(item.startDate);
+      const itemEndDate = new Date(item.endDate);
+      const filterFromDate = fromDate ? new Date(fromDate) : null;
+      const filterToDate = toDate ? new Date(toDate) : null;
+      
+      // Check if the date range overlaps with the filter range
+      if (filterFromDate && filterToDate) {
+        return (
+          (itemStartDate <= filterToDate && itemEndDate >= filterFromDate)
+        );
+      } else if (filterFromDate) {
+        return itemEndDate >= filterFromDate;
+      } else if (filterToDate) {
+        return itemStartDate <= filterToDate;
+      }
+      return true;
+    });
+  };
+
+  const data = filterByDate(getRawData());
   
   const totals = data.reduce((acc, row: any) => ({
     quantity: acc.quantity + (row.quantity || row.orders || 0),
@@ -87,9 +115,13 @@ const ReportsAdmin = () => {
   };
 
   const handleReset = () => {
-    setFromDate('2024-01-01');
-    setToDate('2024-01-31');
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    setFromDate(firstDayOfMonth.toISOString().split('T')[0]);
+    setToDate(today.toISOString().split('T')[0]);
     setGroupBy('product');
+    setReportType('sales');
     toast.success('Filters reset');
   };
 
@@ -243,6 +275,8 @@ const ReportsAdmin = () => {
                 <TableRow>
                   <TableHead>{groupBy === 'product' ? 'Product' : reportType === 'sales' ? 'Customer' : 'Vendor'}</TableHead>
                   <TableHead className="text-right">{groupBy === 'product' ? 'Quantity' : 'Orders'}</TableHead>
+                  <TableHead>Start Date</TableHead>
+                  <TableHead>End Date</TableHead>
                   <TableHead className="text-right">Untaxed Amount</TableHead>
                   <TableHead className="text-right">Tax</TableHead>
                   <TableHead className="text-right">Total</TableHead>
@@ -259,6 +293,8 @@ const ReportsAdmin = () => {
                     <TableCell className="text-right">
                       {(row as any).quantity || (row as any).orders}
                     </TableCell>
+                    <TableCell>{(row as any).startDate}</TableCell>
+                    <TableCell>{(row as any).endDate}</TableCell>
                     <TableCell className="text-right">₹{row.untaxed.toLocaleString()}</TableCell>
                     <TableCell className="text-right">₹{row.tax.toLocaleString()}</TableCell>
                     <TableCell className="text-right font-medium">₹{row.total.toLocaleString()}</TableCell>
@@ -272,6 +308,8 @@ const ReportsAdmin = () => {
                 <TableRow className="bg-muted/50 font-bold">
                   <TableCell>Total</TableCell>
                   <TableCell className="text-right">{totals.quantity}</TableCell>
+                  <TableCell>—</TableCell>
+                  <TableCell>—</TableCell>
                   <TableCell className="text-right">₹{totals.untaxed.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{totals.tax.toLocaleString()}</TableCell>
                   <TableCell className="text-right">₹{totals.total.toLocaleString()}</TableCell>

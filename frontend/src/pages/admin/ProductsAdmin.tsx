@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
-  Filter,
   MoreHorizontal,
   Edit,
   Trash2,
@@ -125,38 +124,6 @@ const ProductsAdmin = () => {
           </Link>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Total Products</p>
-              <p className="text-2xl font-bold">{adminProducts.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Published</p>
-              <p className="text-2xl font-bold text-green-600">
-                {adminProducts.filter(p => p.published).length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Low Stock</p>
-              <p className="text-2xl font-bold text-orange-600">
-                {adminProducts.filter(p => p.stock < 20).length}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-sm text-muted-foreground">Out of Stock</p>
-              <p className="text-2xl font-bold text-red-600">0</p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Filters & Search */}
         <Card>
           <CardContent className="pt-6">
@@ -170,10 +137,6 @@ const ProductsAdmin = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filters
-              </Button>
             </div>
           </CardContent>
         </Card>

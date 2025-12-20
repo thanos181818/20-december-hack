@@ -27,6 +27,11 @@ import ProductsAdmin from "./pages/admin/ProductsAdmin";
 import ProductForm from "./pages/admin/ProductForm";
 import BillingPayments from "./pages/admin/BillingPayments";
 import SalesOrderForm from "./pages/admin/SalesOrderForm";
+import PurchaseOrderForm from "./pages/admin/PurchaseOrderForm";
+import InvoicePayment from "./pages/admin/InvoicePayment";
+import BillPayment from "./pages/admin/BillPayment";
+import AdminInvoiceView from "./pages/admin/InvoiceView";
+import VendorBillView from "./pages/admin/VendorBillView";
 import PaymentTermsOffers from "./pages/admin/PaymentTermsOffers";
 import UsersContacts from "./pages/admin/UsersContacts";
 import ReportsAdmin from "./pages/admin/ReportsAdmin";
@@ -68,6 +73,12 @@ const App = () => (
                 <Route path="/admin/billing/sales" element={<ProtectedRoute requireAdmin><BillingPayments /></ProtectedRoute>} />
                 <Route path="/admin/billing/sales/new" element={<ProtectedRoute requireAdmin><SalesOrderForm /></ProtectedRoute>} />
                 <Route path="/admin/billing/sales/:id" element={<ProtectedRoute requireAdmin><SalesOrderForm /></ProtectedRoute>} />
+                <Route path="/admin/billing/purchase/new" element={<ProtectedRoute requireAdmin><PurchaseOrderForm /></ProtectedRoute>} />
+                <Route path="/admin/billing/purchase/:id" element={<ProtectedRoute requireAdmin><PurchaseOrderForm /></ProtectedRoute>} />
+                <Route path="/admin/billing/invoice/:id" element={<ProtectedRoute requireAdmin><AdminInvoiceView /></ProtectedRoute>} />
+                <Route path="/admin/billing/bill/:id" element={<ProtectedRoute requireAdmin><VendorBillView /></ProtectedRoute>} />
+                <Route path="/admin/billing/invoice-payment/:id" element={<ProtectedRoute requireAdmin><InvoicePayment /></ProtectedRoute>} />
+                <Route path="/admin/billing/bill-payment/:id" element={<ProtectedRoute requireAdmin><BillPayment /></ProtectedRoute>} />
                 <Route path="/admin/offers" element={<ProtectedRoute requireAdmin><PaymentTermsOffers /></ProtectedRoute>} />
                 <Route path="/admin/users" element={<ProtectedRoute requireAdmin><UsersContacts /></ProtectedRoute>} />
                 <Route path="/admin/reports" element={<ProtectedRoute requireAdmin><ReportsAdmin /></ProtectedRoute>} />

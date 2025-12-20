@@ -51,14 +51,75 @@ const BillingPayments = () => {
     invoices, 
     purchaseOrders, 
     vendorBills,
+    contacts,
     updateSalesOrder,
     updateInvoice,
     updateVendorBill,
+    updatePurchaseOrder,
     addInvoice,
+    addVendorBill,
     autoInvoicing,
     setAutoInvoicing,
   } = useAdminData();
   const [activeTab, setActiveTab] = useState('overview');
+  const [salesOrderSearch, setSalesOrderSearch] = useState('');
+  const [purchaseOrderSearch, setPurchaseOrderSearch] = useState('');
+
+  // Calculate current month dates
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  // Calculate overview metrics
+  const currentMonthOrders = salesOrders.filter(order => {
+    const orderDate = new Date(order.date);
+    return orderDate >= currentMonthStart && orderDate <= currentMonthEnd;
+  }).length;
+
+  const pendingOrders = salesOrders.filter(order => 
+    order.status === 'confirmed' && !invoices.some(inv => inv.salesOrderId === order.id)
+  ).length;
+
+  const unpaidInvoices = invoices.filter(inv => 
+    inv.status === 'unpaid' || inv.status === 'partial'
+  ).length;
+
+  const overdueInvoices = invoices.filter(inv => {
+    if (inv.status === 'paid' || inv.status === 'cancelled') return false;
+    const dueDate = new Date(inv.dueDate);
+    return dueDate < now;
+  }).length;
+
+  const currentMonthPOs = purchaseOrders.filter(po => {
+    const poDate = new Date(po.date);
+    return poDate >= currentMonthStart && poDate <= currentMonthEnd;
+  }).length;
+
+  const pendingPOs = purchaseOrders.filter(po => 
+    po.status === 'confirmed' && !vendorBills.some(bill => bill.purchaseOrderId === po.id)
+  ).length;
+
+  const unpaidBills = vendorBills.filter(bill => 
+    bill.status === 'unpaid' || bill.status === 'partial'
+  ).length;
+
+  const overdueBills = vendorBills.filter(bill => {
+    if (bill.status === 'paid' || bill.status === 'cancelled') return false;
+    const dueDate = new Date(bill.dueDate);
+    return dueDate < now;
+  }).length;
+
+  // Filter sales orders by search
+  const filteredSalesOrders = salesOrders.filter(order => 
+    order.orderNumber.toLowerCase().includes(salesOrderSearch.toLowerCase()) ||
+    order.customer.toLowerCase().includes(salesOrderSearch.toLowerCase())
+  );
+
+  // Filter purchase orders by search
+  const filteredPurchaseOrders = purchaseOrders.filter(po => 
+    po.orderNumber.toLowerCase().includes(purchaseOrderSearch.toLowerCase()) ||
+    po.vendor.toLowerCase().includes(purchaseOrderSearch.toLowerCase())
+  );
 
   return (
     <AdminLayout>
@@ -111,7 +172,12 @@ const BillingPayments = () => {
                   >
                     <div className="flex items-center gap-3">
                       <ShoppingCart className="h-5 w-5 text-primary" />
-                      <span>Sales Orders</span>
+                      <div className="text-left">
+                        <div className="font-medium">Sales Orders</div>
+                        <div className="text-xs text-muted-foreground">
+                          {currentMonthOrders} this month • {pendingOrders} pending
+                        </div>
+                      </div>
                     </div>
                     <span className="font-bold">{salesOrders.length}</span>
                   </button>
@@ -121,7 +187,12 @@ const BillingPayments = () => {
                   >
                     <div className="flex items-center gap-3">
                       <FileText className="h-5 w-5 text-primary" />
-                      <span>Customer Invoices</span>
+                      <div className="text-left">
+                        <div className="font-medium">Customer Invoices</div>
+                        <div className="text-xs text-muted-foreground">
+                          {unpaidInvoices} unpaid • {overdueInvoices} overdue
+                        </div>
+                      </div>
                     </div>
                     <span className="font-bold">{invoices.length}</span>
                   </button>
@@ -147,7 +218,12 @@ const BillingPayments = () => {
                   >
                     <div className="flex items-center gap-3">
                       <Package className="h-5 w-5 text-primary" />
-                      <span>Purchase Orders</span>
+                      <div className="text-left">
+                        <div className="font-medium">Purchase Orders</div>
+                        <div className="text-xs text-muted-foreground">
+                          {currentMonthPOs} this month • {pendingPOs} pending
+                        </div>
+                      </div>
                     </div>
                     <span className="font-bold">{purchaseOrders.length}</span>
                   </button>
@@ -157,7 +233,12 @@ const BillingPayments = () => {
                   >
                     <div className="flex items-center gap-3">
                       <Receipt className="h-5 w-5 text-primary" />
-                      <span>Vendor Bills</span>
+                      <div className="text-left">
+                        <div className="font-medium">Vendor Bills</div>
+                        <div className="text-xs text-muted-foreground">
+                          {unpaidBills} unpaid • {overdueBills} overdue
+                        </div>
+                      </div>
                     </div>
                     <span className="font-bold">{vendorBills.length}</span>
                   </button>
@@ -178,7 +259,12 @@ const BillingPayments = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search orders..." className="pl-10" />
+                <Input 
+                  placeholder="Search orders..." 
+                  className="pl-10" 
+                  value={salesOrderSearch}
+                  onChange={(e) => setSalesOrderSearch(e.target.value)}
+                />
               </div>
               <Link to="/admin/billing/sales/new">
                 <Button className="gap-2">
@@ -201,7 +287,7 @@ const BillingPayments = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {salesOrders.map((order) => (
+                  {filteredSalesOrders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">{order.orderNumber}</TableCell>
                       <TableCell>{order.customer}</TableCell>
@@ -224,10 +310,6 @@ const BillingPayments = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem onClick={() => navigate(`/admin/billing/sales/${order.id}`)}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => navigate(`/admin/billing/sales/${order.id}`)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
@@ -257,11 +339,14 @@ const BillingPayments = () => {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.print()}>
                               <Printer className="h-4 w-4 mr-2" />
                               Print
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const customer = contacts.find(c => c.id === order.customerId);
+                              toast.success(`Sales order sent to ${customer?.email || customer?.name || 'customer'}`);
+                            }}>
                               <Send className="h-4 w-4 mr-2" />
                               Send
                             </DropdownMenuItem>
@@ -346,35 +431,29 @@ const BillingPayments = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              navigate(`/admin/billing/invoice/${invoice.id}`);
+                            }}>
                               <Eye className="h-4 w-4 mr-2" />
                               View
                             </DropdownMenuItem>
                             {invoice.status !== 'paid' && (
                               <DropdownMenuItem onClick={() => {
-                                const amount = prompt('Enter payment amount:');
-                                if (amount) {
-                                  const paidAmount = parseFloat(amount);
-                                  const newPaid = invoice.paid + paidAmount;
-                                  const newStatus = newPaid >= invoice.total ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
-                                  updateInvoice(invoice.id, {
-                                    paid: newPaid,
-                                    status: newStatus,
-                                    paidDate: newPaid >= invoice.total ? new Date().toISOString().split('T')[0] : undefined,
-                                  });
-                                  toast.success('Payment registered');
-                                }
+                                navigate(`/admin/billing/invoice-payment/${invoice.id}`);
                               }}>
                                 <CreditCard className="h-4 w-4 mr-2" />
-                                Register Payment
+                                Pay
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.print()}>
                               <Printer className="h-4 w-4 mr-2" />
                               Print
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              const customer = contacts.find(c => c.id === invoice.customerId);
+                              toast.success(`Invoice sent to ${customer?.email || customer?.name || 'customer'}`);
+                            }}>
                               <Send className="h-4 w-4 mr-2" />
                               Send
                             </DropdownMenuItem>
@@ -393,12 +472,19 @@ const BillingPayments = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search orders..." className="pl-10" />
+                <Input 
+                  placeholder="Search orders..." 
+                  className="pl-10" 
+                  value={purchaseOrderSearch}
+                  onChange={(e) => setPurchaseOrderSearch(e.target.value)}
+                />
               </div>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                New Purchase Order
-              </Button>
+              <Link to="/admin/billing/purchase/new">
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Purchase Order
+                </Button>
+              </Link>
             </div>
 
             <Card>
@@ -414,14 +500,14 @@ const BillingPayments = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {purchaseOrders.length === 0 ? (
+                  {filteredPurchaseOrders.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         No purchase orders found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    purchaseOrders.map((order) => (
+                    filteredPurchaseOrders.map((order) => (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">{order.orderNumber}</TableCell>
                         <TableCell>{order.vendor}</TableCell>
@@ -443,43 +529,71 @@ const BillingPayments = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
+                            <DropdownMenuItem onClick={() => navigate(`/admin/billing/purchase/${order.id}`)}>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Receipt className="h-4 w-4 mr-2" />
-                              Create Bill
-                            </DropdownMenuItem>
+                            {order.status === 'confirmed' && (
+                              <DropdownMenuItem onClick={() => {
+                                // Create vendor bill from purchase order
+                                const billDate = new Date();
+                                const dueDate = new Date(billDate);
+                                dueDate.setDate(dueDate.getDate() + 30);
+
+                                addVendorBill({
+                                  billNumber: `BILL-${Date.now()}`,
+                                  vendor: order.vendor,
+                                  vendorId: order.vendorId,
+                                  purchaseOrderId: order.id,
+                                  billDate: billDate.toISOString().split('T')[0],
+                                  dueDate: dueDate.toISOString().split('T')[0],
+                                  lineItems: order.lineItems,
+                                  subtotal: order.subtotal,
+                                  tax: order.tax,
+                                  total: order.total,
+                                  paid: 0,
+                                  status: 'unpaid',
+                                });
+                                toast.success('Vendor bill created successfully');
+                              }}>
+                                <Receipt className="h-4 w-4 mr-2" />
+                                Create Bill
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => window.print()}>
                               <Printer className="h-4 w-4 mr-2" />
                               Print
                             </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Receipt className="h-4 w-4 mr-2" />
-                              Create Bill
+                            <DropdownMenuItem onClick={() => {
+                              const vendor = contacts.find(c => c.id === order.vendorId);
+                              toast.success(`Purchase order sent to ${vendor?.email || vendor?.name || 'vendor'}`);
+                            }}>
+                              <Send className="h-4 w-4 mr-2" />
+                              Send
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print
-                            </DropdownMenuItem>
+                            {order.status === 'draft' && (
+                              <DropdownMenuItem onClick={() => {
+                                updatePurchaseOrder(order.id, { status: 'confirmed' });
+                                toast.success('Purchase order confirmed');
+                              }}>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Confirm
+                              </DropdownMenuItem>
+                            )}
+                            {order.status !== 'cancelled' && (
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={() => {
+                                  updatePurchaseOrder(order.id, { status: 'cancelled' });
+                                  toast.success('Purchase order cancelled');
+                                }}
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -546,32 +660,31 @@ const BillingPayments = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-background">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                navigate(`/admin/billing/bill/${bill.id}`);
+                              }}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 View
                               </DropdownMenuItem>
                               {bill.status !== 'paid' && (
                                 <DropdownMenuItem onClick={() => {
-                                  const amount = prompt('Enter payment amount:');
-                                  if (amount) {
-                                    const paidAmount = parseFloat(amount);
-                                    const newPaid = bill.paid + paidAmount;
-                                    const newStatus = newPaid >= bill.total ? 'paid' : newPaid > 0 ? 'partial' : 'unpaid';
-                                    updateVendorBill(bill.id, {
-                                      paid: newPaid,
-                                      status: newStatus,
-                                    });
-                                    toast.success('Payment registered');
-                                  }
+                                  navigate(`/admin/billing/bill-payment/${bill.id}`);
                                 }}>
                                   <Wallet className="h-4 w-4 mr-2" />
-                                  Register Payment
+                                  Pay
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => window.print()}>
                                 <Printer className="h-4 w-4 mr-2" />
                                 Print
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                const vendor = contacts.find(c => c.id === bill.vendorId);
+                                toast.success(`Bill sent to ${vendor?.email || vendor?.name || 'vendor'}`);
+                              }}>
+                                <Send className="h-4 w-4 mr-2" />
+                                Send
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

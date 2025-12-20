@@ -6,7 +6,6 @@ import {
   Save,
   Plus,
   Trash2,
-  Tag,
   Printer,
   Send,
   CheckCircle,
@@ -33,7 +32,6 @@ import {
 } from '@/components/ui/table';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { useAdminData } from '@/contexts/AdminDataContext';
-import { products } from '@/data/products';
 import { toast } from 'sonner';
 
 interface LineItem {
@@ -46,34 +44,27 @@ interface LineItem {
   total: number;
 }
 
-
-const SalesOrderForm = () => {
+const PurchaseOrderForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { salesOrders, addSalesOrder, updateSalesOrder, contacts, paymentTerms, products: adminProducts, addInvoice } = useAdminData();
+  const { purchaseOrders, addPurchaseOrder, updatePurchaseOrder, contacts, products: adminProducts, addVendorBill } = useAdminData();
   const isEditing = !!id;
-  const existingOrder = isEditing ? salesOrders.find(o => o.id === id) : null;
+  const existingOrder = isEditing ? purchaseOrders.find(o => o.id === id) : null;
   
   const [formData, setFormData] = useState({
-    customer: existingOrder?.customerId || '',
-    paymentTerm: existingOrder?.paymentTerm || '',
+    vendor: existingOrder?.vendorId || '',
     date: existingOrder?.date || new Date().toISOString().split('T')[0],
-    couponCode: existingOrder?.couponCode || '',
   });
 
   const [lineItems, setLineItems] = useState<LineItem[]>(existingOrder?.lineItems || []);
-  const [couponDiscount, setCouponDiscount] = useState(existingOrder?.discount || 0);
 
   useEffect(() => {
     if (existingOrder) {
       setFormData({
-        customer: existingOrder.customerId,
-        paymentTerm: existingOrder.paymentTerm || '',
+        vendor: existingOrder.vendorId,
         date: existingOrder.date,
-        couponCode: existingOrder.couponCode || '',
       });
       setLineItems(existingOrder.lineItems);
-      setCouponDiscount(existingOrder.discount);
     }
   }, [existingOrder]);
 
@@ -86,7 +77,7 @@ const SalesOrderForm = () => {
         productName: '',
         quantity: 1,
         unitPrice: 0,
-        tax: 18,
+        tax: 12,
         total: 0,
       },
     ]);
@@ -103,8 +94,8 @@ const SalesOrderForm = () => {
           const product = adminProducts.find(p => p.id === value);
           if (product) {
             updated.productName = product.name;
-            updated.unitPrice = product.salesPrice;
-            updated.tax = product.salesTax;
+            updated.unitPrice = product.purchasePrice;
+            updated.tax = product.purchaseTax;
           }
         }
         
@@ -121,26 +112,13 @@ const SalesOrderForm = () => {
     setLineItems(items => items.filter(item => item.id !== id));
   };
 
-  const applyCoupon = () => {
-    if (formData.couponCode.toUpperCase() === 'SAVE10') {
-      setCouponDiscount(10);
-      toast.success('Coupon applied: 10% discount');
-    } else if (formData.couponCode.toUpperCase() === 'SAVE20') {
-      setCouponDiscount(20);
-      toast.success('Coupon applied: 20% discount');
-    } else {
-      toast.error('Invalid coupon code');
-    }
-  };
-
   const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
   const taxTotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.tax / 100), 0);
-  const discountAmount = subtotal * (couponDiscount / 100);
-  const grandTotal = subtotal + taxTotal - discountAmount;
+  const grandTotal = subtotal + taxTotal;
 
   const handleSubmit = (status: 'draft' | 'confirmed') => {
-    if (!formData.customer) {
-      toast.error('Please select a customer');
+    if (!formData.vendor) {
+      toast.error('Please select a vendor');
       return;
     }
     if (lineItems.length === 0) {
@@ -148,78 +126,68 @@ const SalesOrderForm = () => {
       return;
     }
 
-    const customer = contacts.find(c => c.id === formData.customer);
-    if (!customer) {
-      toast.error('Customer not found');
+    const vendor = contacts.find(c => c.id === formData.vendor);
+    if (!vendor) {
+      toast.error('Vendor not found');
       return;
     }
 
     const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
     const taxTotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.tax / 100), 0);
-    const discountAmount = subtotal * (couponDiscount / 100);
-    const total = subtotal + taxTotal - discountAmount;
+    const total = subtotal + taxTotal;
 
     if (isEditing && id) {
-      updateSalesOrder(id, {
-        customer: customer.name || 'Unknown',
-        customerId: customer.id,
-        paymentTerm: formData.paymentTerm,
+      updatePurchaseOrder(id, {
+        vendor: vendor.name || 'Unknown',
+        vendorId: vendor.id,
         date: formData.date,
         lineItems,
-        couponCode: formData.couponCode,
-        discount: couponDiscount,
         subtotal,
         tax: taxTotal,
         total,
         status,
       });
-      toast.success(`Sales order ${status === 'confirmed' ? 'confirmed' : 'updated'}`);
+      toast.success(`Purchase order ${status === 'confirmed' ? 'confirmed' : 'updated'}`);
     } else {
-      const orderNumber = `SO-${new Date().getFullYear()}-${String(Date.now()).slice(-3).padStart(3, '0')}`;
-      addSalesOrder({
+      const orderNumber = `PO-${new Date().getFullYear()}-${String(Date.now()).slice(-3).padStart(3, '0')}`;
+      addPurchaseOrder({
         orderNumber,
-        customer: customer.name || 'Unknown',
-        customerId: customer.id,
-        paymentTerm: formData.paymentTerm,
+        vendor: vendor.name || 'Unknown',
+        vendorId: vendor.id,
         date: formData.date,
         lineItems,
-        couponCode: formData.couponCode,
-        discount: couponDiscount,
         subtotal,
         tax: taxTotal,
         total,
         status,
       });
-      toast.success(`Sales order ${status === 'confirmed' ? 'confirmed' : 'saved as draft'}`);
+      toast.success(`Purchase order ${status === 'confirmed' ? 'confirmed' : 'saved as draft'}`);
     }
     navigate('/admin/billing');
   };
 
-  const handleCreateInvoice = () => {
+  const handleCreateBill = () => {
     if (!existingOrder || existingOrder.status !== 'confirmed') {
-      toast.error('Only confirmed orders can be invoiced');
+      toast.error('Only confirmed orders can be billed');
       return;
     }
 
-    const customer = contacts.find(c => c.id === existingOrder.customerId);
-    if (!customer) {
-      toast.error('Customer not found');
+    const vendor = contacts.find(c => c.id === existingOrder.vendorId);
+    if (!vendor) {
+      toast.error('Vendor not found');
       return;
     }
 
-    const paymentTerm = paymentTerms.find(t => t.id === existingOrder.paymentTerm);
-    const daysToAdd = paymentTerm ? (paymentTerm.discountDays || 30) : 30;
-    const invoiceDate = new Date();
-    const dueDate = new Date(invoiceDate);
-    dueDate.setDate(dueDate.getDate() + daysToAdd);
+    const billDate = new Date();
+    const dueDate = new Date(billDate);
+    dueDate.setDate(dueDate.getDate() + 30);
 
-    const newInvoiceId = addInvoice({
-      invoiceNumber: `INV-${Date.now()}`,
-      customer: existingOrder.customer,
-      customerId: existingOrder.customerId,
-      salesOrderId: existingOrder.id,
-      paymentTerm: existingOrder.paymentTerm,
-      invoiceDate: invoiceDate.toISOString().split('T')[0],
+    addVendorBill({
+      billNumber: `BILL-${Date.now()}`,
+      vendor: existingOrder.vendor,
+      vendorId: existingOrder.vendorId,
+      purchaseOrderId: existingOrder.id,
+      billDate: billDate.toISOString().split('T')[0],
       dueDate: dueDate.toISOString().split('T')[0],
       lineItems: existingOrder.lineItems,
       subtotal: existingOrder.subtotal,
@@ -229,7 +197,7 @@ const SalesOrderForm = () => {
       status: 'unpaid',
     });
 
-    toast.success('Invoice created successfully');
+    toast.success('Vendor bill created successfully');
     navigate('/admin/billing');
   };
 
@@ -238,18 +206,18 @@ const SalesOrderForm = () => {
   };
 
   const handleSend = () => {
-    if (!formData.customer) {
-      toast.error('Please select a customer before sending');
+    if (!formData.vendor) {
+      toast.error('Please select a vendor before sending');
       return;
     }
-    const customer = contacts.find(c => c.id === formData.customer);
-    toast.success(`Sales order sent to ${customer?.email || customer?.name || 'customer'}`);
+    const vendor = contacts.find(c => c.id === formData.vendor);
+    toast.success(`Purchase order sent to ${vendor?.email || vendor?.name || 'vendor'}`);
   };
 
   return (
     <AdminLayout>
       <Helmet>
-        <title>New Sales Order | Admin | ApparelDesk</title>
+        <title>New Purchase Order | Admin | ApparelDesk</title>
       </Helmet>
 
       <div className="space-y-6">
@@ -265,7 +233,7 @@ const SalesOrderForm = () => {
             </Button>
             <div>
               <h1 className="font-display text-2xl font-bold text-foreground">
-                {isEditing ? 'Edit Sales Order' : 'New Sales Order'}
+                {isEditing ? 'Edit Purchase Order' : 'New Purchase Order'}
               </h1>
               <p className="text-muted-foreground">{existingOrder?.orderNumber || 'New Order'}</p>
             </div>
@@ -280,9 +248,9 @@ const SalesOrderForm = () => {
               Send
             </Button>
             {isEditing && existingOrder?.status === 'confirmed' && (
-              <Button variant="outline" onClick={handleCreateInvoice} className="gap-2">
+              <Button variant="outline" onClick={handleCreateBill} className="gap-2">
                 <FileText className="h-4 w-4" />
-                Create Invoice
+                Create Bill
               </Button>
             )}
             <Button variant="outline" onClick={() => handleSubmit('draft')}>
@@ -302,35 +270,19 @@ const SalesOrderForm = () => {
             <CardTitle>Order Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label>Customer *</Label>
+                <Label>Vendor *</Label>
                 <Select
-                  value={formData.customer}
-                  onValueChange={(v) => setFormData({ ...formData, customer: v })}
+                  value={formData.vendor}
+                  onValueChange={(v) => setFormData({ ...formData, vendor: v })}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select customer" />
+                    <SelectValue placeholder="Select vendor" />
                   </SelectTrigger>
                   <SelectContent className="bg-background">
-                    {contacts.filter(c => c.type === 'customer' || c.type === 'both').map((c) => (
+                    {contacts.filter(c => c.type === 'vendor' || c.type === 'both').map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name || 'Anonymous'}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Payment Term</Label>
-                <Select
-                  value={formData.paymentTerm}
-                  onValueChange={(v) => setFormData({ ...formData, paymentTerm: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select term" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background">
-                    {paymentTerms.filter(t => t.active).map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -389,7 +341,7 @@ const SalesOrderForm = () => {
                           <SelectContent className="bg-background">
                             {adminProducts.filter(p => p.status !== 'archived').map((p) => (
                               <SelectItem key={p.id} value={p.id}>
-                                {p.name} - ₹{p.salesPrice}
+                                {p.name} - ₹{p.purchasePrice}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -438,61 +390,29 @@ const SalesOrderForm = () => {
           </CardContent>
         </Card>
 
-        {/* Coupon & Totals */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Tag className="h-5 w-5" />
-                Apply Coupon
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter coupon code"
-                  value={formData.couponCode}
-                  onChange={(e) => setFormData({ ...formData, couponCode: e.target.value })}
-                />
-                <Button onClick={applyCoupon}>Apply</Button>
-              </div>
-              {couponDiscount > 0 && (
-                <p className="text-sm text-green-600 mt-2">
-                  {couponDiscount}% discount applied
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span>₹{subtotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Tax</span>
-                <span>₹{taxTotal.toLocaleString()}</span>
-              </div>
-              {couponDiscount > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>Discount ({couponDiscount}%)</span>
-                  <span>-₹{discountAmount.toLocaleString()}</span>
-                </div>
-              )}
-              <div className="flex justify-between pt-2 border-t font-bold text-lg">
-                <span>Grand Total</span>
-                <span>₹{grandTotal.toLocaleString()}</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Totals */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span>₹{subtotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Tax</span>
+              <span>₹{taxTotal.toLocaleString()}</span>
+            </div>
+            <div className="flex justify-between pt-2 border-t font-bold text-lg">
+              <span>Grand Total</span>
+              <span>₹{grandTotal.toLocaleString()}</span>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );
 };
 
-export default SalesOrderForm;
+export default PurchaseOrderForm;

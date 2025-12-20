@@ -100,11 +100,6 @@ const ProductForm = () => {
       return;
     }
 
-    if (formData.published && status !== 'confirmed') {
-      toast.error('Only confirmed products can be published');
-      return;
-    }
-
     if (isEditing && id) {
       updateProduct(id, {
         ...formData,
@@ -192,11 +187,37 @@ const ProductForm = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" className="gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => {
+                if (isEditing && id) {
+                  const currentIndex = products.findIndex(p => p.id === id);
+                  if (currentIndex > 0) {
+                    navigate(`/admin/products/${products[currentIndex - 1].id}`);
+                  }
+                }
+              }}
+              disabled={!isEditing || !id || products.findIndex(p => p.id === id) === 0}
+            >
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
-            <Button type="button" variant="outline" className="gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="gap-2"
+              onClick={() => {
+                if (isEditing && id) {
+                  const currentIndex = products.findIndex(p => p.id === id);
+                  if (currentIndex < products.length - 1) {
+                    navigate(`/admin/products/${products[currentIndex + 1].id}`);
+                  }
+                }
+              }}
+              disabled={!isEditing || !id || products.findIndex(p => p.id === id) === products.length - 1}
+            >
               Next
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -433,6 +454,7 @@ const ProductForm = () => {
                       id="purchasePrice"
                       type="number"
                       min="0"
+                      step="0.01"
                       value={formData.purchasePrice}
                       onChange={(e) => setFormData({ ...formData, purchasePrice: parseFloat(e.target.value) || 0 })}
                     />
@@ -461,7 +483,6 @@ const ProductForm = () => {
                     id="published"
                     checked={formData.published}
                     onCheckedChange={(checked) => setFormData({ ...formData, published: checked })}
-                    disabled={status !== 'confirmed'}
                   />
                 </div>
               </CardContent>

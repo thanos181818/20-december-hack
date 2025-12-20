@@ -50,18 +50,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
 
-// Mock data
-const mockPaymentTerms = [
+// Initial data
+const initialPaymentTerms = [
   { id: '1', name: 'Immediate Payment', earlyDiscount: false, discountPercent: 0, discountDays: 0, active: true },
   { id: '2', name: 'Net 15', earlyDiscount: true, discountPercent: 2, discountDays: 7, active: true },
   { id: '3', name: 'Net 30', earlyDiscount: true, discountPercent: 3, discountDays: 10, active: true },
   { id: '4', name: 'Net 45', earlyDiscount: false, discountPercent: 0, discountDays: 0, active: false },
 ];
 
-const mockOffers = [
-  { id: '1', name: 'Summer Sale', discount: 20, startDate: '2024-06-01', endDate: '2024-08-31', availableOn: 'website', target: 'customer', status: 'active' },
-  { id: '2', name: 'Bulk Discount', discount: 15, startDate: '2024-01-01', endDate: '2024-12-31', availableOn: 'sales', target: 'both', status: 'active' },
-  { id: '3', name: 'New Year Special', discount: 25, startDate: '2024-12-25', endDate: '2025-01-05', availableOn: 'website', target: 'customer', status: 'upcoming' },
+const initialOffers = [
+  { id: '1', name: 'Summer Sale', discount: 20, startDate: '2024-06-01', endDate: '2024-08-31', availableOn: 'website', status: 'active' },
+  { id: '2', name: 'Bulk Discount', discount: 15, startDate: '2024-01-01', endDate: '2024-12-31', availableOn: 'sales', status: 'active' },
+  { id: '3', name: 'New Year Special', discount: 25, startDate: '2024-12-25', endDate: '2025-01-05', availableOn: 'website', status: 'upcoming' },
 ];
 
 const mockCoupons = [
@@ -72,9 +72,154 @@ const mockCoupons = [
 
 const PaymentTermsOffers = () => {
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // State management
+  const [paymentTerms, setPaymentTerms] = useState(initialPaymentTerms);
+  const [offers, setOffers] = useState(initialOffers);
+  
+  // Dialog states
   const [showPaymentTermDialog, setShowPaymentTermDialog] = useState(false);
   const [showOfferDialog, setShowOfferDialog] = useState(false);
   const [showCouponDialog, setShowCouponDialog] = useState(false);
+  
+  // Editing states
+  const [editingPaymentTerm, setEditingPaymentTerm] = useState<any>(null);
+  const [editingOffer, setEditingOffer] = useState<any>(null);
+  
+  // Form states for payment terms
+  const [paymentTermForm, setPaymentTermForm] = useState({
+    name: '',
+    earlyDiscount: false,
+    discountPercent: 0,
+    discountDays: 0,
+    active: true
+  });
+  
+  // Form states for offers
+  const [offerForm, setOfferForm] = useState({
+    name: '',
+    discount: 0,
+    startDate: '',
+    endDate: '',
+    availableOn: 'website'
+  });
+  
+  // Payment Term handlers
+  const handleAddPaymentTerm = () => {
+    setEditingPaymentTerm(null);
+    setPaymentTermForm({
+      name: '',
+      earlyDiscount: false,
+      discountPercent: 0,
+      discountDays: 0,
+      active: true
+    });
+    setShowPaymentTermDialog(true);
+  };
+  
+  const handleEditPaymentTerm = (termId: string) => {
+    const term = paymentTerms.find(t => t.id === termId);
+    if (term) {
+      setEditingPaymentTerm(term);
+      setPaymentTermForm({
+        name: term.name,
+        earlyDiscount: term.earlyDiscount,
+        discountPercent: term.discountPercent,
+        discountDays: term.discountDays,
+        active: term.active
+      });
+      setShowPaymentTermDialog(true);
+    }
+  };
+  
+  const handleDeletePaymentTerm = (termId: string) => {
+    if (window.confirm('Are you sure you want to delete this payment term?')) {
+      setPaymentTerms(paymentTerms.filter(t => t.id !== termId));
+      toast.success('Payment term deleted successfully');
+    }
+  };
+  
+  const handleSavePaymentTerm = () => {
+    if (!paymentTermForm.name) {
+      toast.error('Please enter a term name');
+      return;
+    }
+    
+    if (editingPaymentTerm) {
+      setPaymentTerms(paymentTerms.map(t => 
+        t.id === editingPaymentTerm.id ? { ...t, ...paymentTermForm } : t
+      ));
+      toast.success('Payment term updated successfully');
+    } else {
+      const newTerm = {
+        id: String(Date.now()),
+        ...paymentTermForm
+      };
+      setPaymentTerms([...paymentTerms, newTerm]);
+      toast.success('Payment term created successfully');
+    }
+    setShowPaymentTermDialog(false);
+  };
+  
+  // Offer handlers
+  const handleAddOffer = () => {
+    setEditingOffer(null);
+    setOfferForm({
+      name: '',
+      discount: 0,
+      startDate: '',
+      endDate: '',
+      availableOn: 'website'
+    });
+    setShowOfferDialog(true);
+  };
+  
+  const handleEditOffer = (offerId: string) => {
+    const offer = offers.find(o => o.id === offerId);
+    if (offer) {
+      setEditingOffer(offer);
+      setOfferForm({
+        name: offer.name,
+        discount: offer.discount,
+        startDate: offer.startDate,
+        endDate: offer.endDate,
+        availableOn: offer.availableOn
+      });
+      setShowOfferDialog(true);
+    }
+  };
+  
+  const handleDeleteOffer = (offerId: string) => {
+    if (window.confirm('Are you sure you want to delete this offer?')) {
+      setOffers(offers.filter(o => o.id !== offerId));
+      toast.success('Offer deleted successfully');
+    }
+  };
+  
+  const handleSaveOffer = () => {
+    if (!offerForm.name || !offerForm.discount || !offerForm.startDate || !offerForm.endDate) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
+    const status = new Date(offerForm.startDate) > new Date() ? 'upcoming' : 'active';
+    
+    if (editingOffer) {
+      setOffers(offers.map(o => 
+        o.id === editingOffer.id ? { ...o, ...offerForm, status } : o
+      ));
+      toast.success('Offer updated successfully');
+    } else {
+      const newOffer = {
+        id: String(Date.now()),
+        ...offerForm,
+        status
+      };
+      setOffers([...offers, newOffer]);
+      toast.success('Offer created successfully');
+    }
+    setShowOfferDialog(false);
+  };
 
   return (
     <AdminLayout>
@@ -111,7 +256,7 @@ const PaymentTermsOffers = () => {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{mockPaymentTerms.filter(t => t.active).length}</p>
+                  <p className="text-3xl font-bold">{paymentTerms.filter(t => t.active).length}</p>
                   <p className="text-sm text-muted-foreground">Active payment terms</p>
                 </CardContent>
               </Card>
@@ -127,7 +272,7 @@ const PaymentTermsOffers = () => {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold">{mockOffers.filter(o => o.status === 'active').length}</p>
+                  <p className="text-3xl font-bold">{offers.filter(o => o.status === 'active').length}</p>
                   <p className="text-sm text-muted-foreground">Currently running</p>
                 </CardContent>
               </Card>
@@ -139,43 +284,62 @@ const PaymentTermsOffers = () => {
             <div className="flex justify-end">
               <Dialog open={showPaymentTermDialog} onOpenChange={setShowPaymentTermDialog}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={handleAddPaymentTerm}>
                     <Plus className="h-4 w-4" />
                     Add Payment Term
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-background">
                   <DialogHeader>
-                    <DialogTitle>Add Payment Term</DialogTitle>
+                    <DialogTitle>{editingPaymentTerm ? 'Edit Payment Term' : 'Add Payment Term'}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div>
                       <Label>Term Name</Label>
-                      <Input placeholder="e.g., Net 30" />
+                      <Input 
+                        placeholder="e.g., Net 30" 
+                        value={paymentTermForm.name}
+                        onChange={(e) => setPaymentTermForm({ ...paymentTermForm, name: e.target.value })}
+                      />
                     </div>
                     <div className="flex items-center justify-between">
                       <Label>Early Payment Discount</Label>
-                      <Switch />
+                      <Switch 
+                        checked={paymentTermForm.earlyDiscount}
+                        onCheckedChange={(checked) => setPaymentTermForm({ ...paymentTermForm, earlyDiscount: checked })}
+                      />
                     </div>
+                    {paymentTermForm.earlyDiscount && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Discount %</Label>
-                        <Input type="number" placeholder="0" />
+                        <Input 
+                          type="number" 
+                          placeholder="0" 
+                          value={paymentTermForm.discountPercent}
+                          onChange={(e) => setPaymentTermForm({ ...paymentTermForm, discountPercent: parseFloat(e.target.value) || 0 })}
+                        />
                       </div>
                       <div>
                         <Label>Within Days</Label>
-                        <Input type="number" placeholder="0" />
+                        <Input 
+                          type="number" 
+                          placeholder="0" 
+                          value={paymentTermForm.discountDays}
+                          onChange={(e) => setPaymentTermForm({ ...paymentTermForm, discountDays: parseInt(e.target.value) || 0 })}
+                        />
                       </div>
                     </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <Label>Active</Label>
-                      <Switch defaultChecked />
+                      <Switch 
+                        checked={paymentTermForm.active}
+                        onCheckedChange={(checked) => setPaymentTermForm({ ...paymentTermForm, active: checked })}
+                      />
                     </div>
-                    <Button className="w-full" onClick={() => {
-                      toast.success('Payment term created');
-                      setShowPaymentTermDialog(false);
-                    }}>
-                      Create Term
+                    <Button className="w-full" onClick={handleSavePaymentTerm}>
+                      {editingPaymentTerm ? 'Update' : 'Create'} Term
                     </Button>
                   </div>
                 </DialogContent>
@@ -193,7 +357,7 @@ const PaymentTermsOffers = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockPaymentTerms.map((term) => (
+                  {paymentTerms.map((term) => (
                     <TableRow key={term.id}>
                       <TableCell className="font-medium">{term.name}</TableCell>
                       <TableCell>
@@ -220,12 +384,12 @@ const PaymentTermsOffers = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditPaymentTerm(term.id)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeletePaymentTerm(term.id)}>
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -244,37 +408,54 @@ const PaymentTermsOffers = () => {
             <div className="flex justify-end">
               <Dialog open={showOfferDialog} onOpenChange={setShowOfferDialog}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
+                  <Button className="gap-2" onClick={handleAddOffer}>
                     <Plus className="h-4 w-4" />
                     Create Offer
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-background">
                   <DialogHeader>
-                    <DialogTitle>Create Offer</DialogTitle>
+                    <DialogTitle>{editingOffer ? 'Edit Offer' : 'Create Offer'}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div>
                       <Label>Offer Name</Label>
-                      <Input placeholder="e.g., Summer Sale" />
+                      <Input 
+                        placeholder="e.g., Summer Sale" 
+                        value={offerForm.name}
+                        onChange={(e) => setOfferForm({ ...offerForm, name: e.target.value })}
+                      />
                     </div>
                     <div>
                       <Label>Discount Percentage</Label>
-                      <Input type="number" placeholder="0" />
+                      <Input 
+                        type="number" 
+                        placeholder="0" 
+                        value={offerForm.discount}
+                        onChange={(e) => setOfferForm({ ...offerForm, discount: parseFloat(e.target.value) || 0 })}
+                      />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label>Start Date</Label>
-                        <Input type="date" />
+                        <Input 
+                          type="date" 
+                          value={offerForm.startDate}
+                          onChange={(e) => setOfferForm({ ...offerForm, startDate: e.target.value })}
+                        />
                       </div>
                       <div>
                         <Label>End Date</Label>
-                        <Input type="date" />
+                        <Input 
+                          type="date" 
+                          value={offerForm.endDate}
+                          onChange={(e) => setOfferForm({ ...offerForm, endDate: e.target.value })}
+                        />
                       </div>
                     </div>
                     <div>
                       <Label>Available On</Label>
-                      <Select>
+                      <Select value={offerForm.availableOn} onValueChange={(v) => setOfferForm({ ...offerForm, availableOn: v })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select" />
                         </SelectTrigger>
@@ -285,24 +466,8 @@ const PaymentTermsOffers = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
-                      <Label>Target</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background">
-                          <SelectItem value="customer">Customer</SelectItem>
-                          <SelectItem value="vendor">Vendor</SelectItem>
-                          <SelectItem value="both">Both</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button className="w-full" onClick={() => {
-                      toast.success('Offer created');
-                      setShowOfferDialog(false);
-                    }}>
-                      Create Offer
+                    <Button className="w-full" onClick={handleSaveOffer}>
+                      {editingOffer ? 'Update' : 'Create'} Offer
                     </Button>
                   </div>
                 </DialogContent>
@@ -322,7 +487,7 @@ const PaymentTermsOffers = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockOffers.map((offer) => (
+                  {offers.map((offer) => (
                     <TableRow key={offer.id}>
                       <TableCell className="font-medium">{offer.name}</TableCell>
                       <TableCell>{offer.discount}%</TableCell>
@@ -358,12 +523,12 @@ const PaymentTermsOffers = () => {
                               <Tag className="h-4 w-4 mr-2" />
                               Generate Coupons
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditOffer(offer.id)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteOffer(offer.id)}>
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -403,7 +568,7 @@ const PaymentTermsOffers = () => {
                           <SelectValue placeholder="Select offer" />
                         </SelectTrigger>
                         <SelectContent className="bg-background">
-                          {mockOffers.map(offer => (
+                          {offers.map(offer => (
                             <SelectItem key={offer.id} value={offer.id}>
                               {offer.name} ({offer.discount}%)
                             </SelectItem>

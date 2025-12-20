@@ -16,7 +16,24 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,30 +53,152 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { toast } from 'sonner';
 
-// Mock data
-const mockUsers = [
-  { id: '1', name: 'John Admin', email: 'john@appareldesk.com', phone: '+91 9876543210', role: 'internal', status: 'active' },
-  { id: '2', name: 'Jane Staff', email: 'jane@appareldesk.com', phone: '+91 9876543211', role: 'internal', status: 'active' },
-  { id: '3', name: 'Customer One', email: 'customer1@email.com', phone: '+91 9876543212', role: 'portal', status: 'active' },
-  { id: '4', name: 'Customer Two', email: 'customer2@email.com', phone: '+91 9876543213', role: 'portal', status: 'active' },
-  { id: '5', name: 'Customer Three', email: 'customer3@email.com', phone: '+91 9876543214', role: 'portal', status: 'archived' },
+// Initial data
+const initialUsers = [
+  { id: '1', name: 'John Admin', email: 'john@appareldesk.com', phone: '+91 9876543210', address: '123 Main St, Mumbai, Maharashtra', role: 'internal', status: 'active' },
+  { id: '2', name: 'Jane Staff', email: 'jane@appareldesk.com', phone: '+91 9876543211', address: '456 Park Ave, Delhi, NCR', role: 'internal', status: 'active' },
+  { id: '3', name: 'Customer One', email: 'customer1@email.com', phone: '+91 9876543212', address: '789 Garden Road, Bangalore, Karnataka', role: 'portal', status: 'active' },
+  { id: '4', name: 'Customer Two', email: 'customer2@email.com', phone: '+91 9876543213', address: '321 Lake View, Pune, Maharashtra', role: 'portal', status: 'active' },
+  { id: '5', name: 'Customer Three', email: 'customer3@email.com', phone: '+91 9876543214', address: '654 Hill Station, Chennai, Tamil Nadu', role: 'portal', status: 'archived' },
 ];
 
-const mockContacts = [
-  { id: '1', name: 'ABC Textiles', email: 'abc@textiles.com', phone: '+91 9876543220', type: 'vendor', status: 'active' },
-  { id: '2', name: 'XYZ Fabrics', email: 'xyz@fabrics.com', phone: '+91 9876543221', type: 'vendor', status: 'active' },
-  { id: '3', name: 'Retail Customer 1', email: 'retail1@email.com', phone: '+91 9876543222', type: 'customer', status: 'active' },
-  { id: '4', name: 'Wholesale Buyer', email: 'wholesale@email.com', phone: '+91 9876543223', type: 'both', status: 'active' },
+const initialContacts = [
+  { id: '1', name: 'ABC Textiles', email: 'abc@textiles.com', phone: '+91 9876543220', address: 'Industrial Area, Surat, Gujarat', type: 'vendor', status: 'active' },
+  { id: '2', name: 'XYZ Fabrics', email: 'xyz@fabrics.com', phone: '+91 9876543221', address: 'Textile Market, Ludhiana, Punjab', type: 'vendor', status: 'active' },
+  { id: '3', name: 'Retail Customer 1', email: 'retail1@email.com', phone: '+91 9876543222', address: 'Shopping Complex, Kolkata, West Bengal', type: 'customer', status: 'active' },
+  { id: '4', name: 'Wholesale Buyer', email: 'wholesale@email.com', phone: '+91 9876543223', address: 'Trade Center, Jaipur, Rajasthan', type: 'both', status: 'active' },
 ];
 
 const UsersContacts = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [contactSearchQuery, setContactSearchQuery] = useState('');
+  
+  // Users and Contacts state
+  const [users, setUsers] = useState(initialUsers);
+  const [contacts, setContacts] = useState(initialContacts);
+  
+  // Dialog states
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editingContact, setEditingContact] = useState<any>(null);
+  
+  // Form states
+  const [userForm, setUserForm] = useState({ name: '', email: '', phone: '', address: '', role: 'portal' });
+  const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', address: '', type: 'customer' });
 
-  const internalUsers = mockUsers.filter(u => u.role === 'internal');
-  const portalUsers = mockUsers.filter(u => u.role === 'portal');
-  const vendors = mockContacts.filter(c => c.type === 'vendor' || c.type === 'both');
-  const customers = mockContacts.filter(c => c.type === 'customer' || c.type === 'both');
+  const internalUsers = users.filter(u => u.role === 'internal');
+  const portalUsers = users.filter(u => u.role === 'portal');
+  const vendors = contacts.filter(c => c.type === 'vendor' || c.type === 'both');
+  const totalCustomers = internalUsers.length + portalUsers.length;
+
+  // Filter users based on search
+  const filteredUsers = users.filter(user => 
+    user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+    user.phone.includes(userSearchQuery) ||
+    user.address.toLowerCase().includes(userSearchQuery.toLowerCase())
+  );
+
+  // Filter contacts based on search
+  const filteredContacts = contacts.filter(contact => 
+    contact.name.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+    contact.email.toLowerCase().includes(contactSearchQuery.toLowerCase()) ||
+    contact.phone.includes(contactSearchQuery) ||
+    contact.address.toLowerCase().includes(contactSearchQuery.toLowerCase())
+  );
+
+  const handleAddUser = () => {
+    setEditingUser(null);
+    setUserForm({ name: '', email: '', phone: '', address: '', role: 'portal' });
+    setUserDialogOpen(true);
+  };
+
+  const handleAddContact = () => {
+    setEditingContact(null);
+    setContactForm({ name: '', email: '', phone: '', address: '', type: 'customer' });
+    setContactDialogOpen(true);
+  };
+
+  const handleEditUser = (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      setEditingUser(user);
+      setUserForm({ name: user.name, email: user.email, phone: user.phone, address: user.address, role: user.role });
+      setUserDialogOpen(true);
+    }
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    if (window.confirm('Are you sure you want to delete this user?')) {
+      setUsers(users.filter(u => u.id !== userId));
+      toast.success('User deleted successfully');
+    }
+  };
+
+  const handleEditContact = (contactId: string) => {
+    const contact = contacts.find(c => c.id === contactId);
+    if (contact) {
+      setEditingContact(contact);
+      setContactForm({ name: contact.name, email: contact.email, phone: contact.phone, address: contact.address, type: contact.type });
+      setContactDialogOpen(true);
+    }
+  };
+
+  const handleDeleteContact = (contactId: string) => {
+    if (window.confirm('Are you sure you want to delete this contact?')) {
+      setContacts(contacts.filter(c => c.id !== contactId));
+      toast.success('Contact deleted successfully');
+    }
+  };
+
+  const handleSaveUser = () => {
+    if (!userForm.name || !userForm.email || !userForm.phone) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (editingUser) {
+      // Update existing user
+      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...userForm } : u));
+      toast.success('User updated successfully');
+    } else {
+      // Add new user
+      const newUser = {
+        id: String(Date.now()),
+        ...userForm,
+        status: 'active'
+      };
+      setUsers([...users, newUser]);
+      toast.success('User added successfully');
+    }
+    setUserDialogOpen(false);
+  };
+
+  const handleSaveContact = () => {
+    if (!contactForm.name || !contactForm.email || !contactForm.phone) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (editingContact) {
+      // Update existing contact
+      setContacts(contacts.map(c => c.id === editingContact.id ? { ...c, ...contactForm } : c));
+      toast.success('Contact updated successfully');
+    } else {
+      // Add new contact
+      const newContact = {
+        id: String(Date.now()),
+        ...contactForm,
+        status: 'active'
+      };
+      setContacts([...contacts, newContact]);
+      toast.success('Contact added successfully');
+    }
+    setContactDialogOpen(false);
+  };
 
   return (
     <AdminLayout>
@@ -126,7 +265,7 @@ const UsersContacts = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">Customers</p>
-                      <p className="text-3xl font-bold">{customers.length}</p>
+                      <p className="text-3xl font-bold">{totalCustomers}</p>
                     </div>
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">Vendors</p>
@@ -146,11 +285,11 @@ const UsersContacts = () => {
                 <Input
                   placeholder="Search users..."
                   className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={userSearchQuery}
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
                 />
               </div>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={handleAddUser}>
                 <Plus className="h-4 w-4" />
                 Add User
               </Button>
@@ -162,13 +301,20 @@ const UsersContacts = () => {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockUsers.map((user) => (
+                  {filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                  filteredUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -193,21 +339,15 @@ const UsersContacts = () => {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <p className="text-sm text-muted-foreground">{user.address}</p>
+                      </TableCell>
+                      <TableCell>
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           user.role === 'internal' 
                             ? 'bg-blue-100 text-blue-700' 
                             : 'bg-green-100 text-green-700'
                         }`}>
                           {user.role === 'internal' ? 'Internal' : 'Portal'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          user.status === 'active' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {user.status}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -218,16 +358,12 @@ const UsersContacts = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditUser(user.id)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Archive className="h-4 w-4 mr-2" />
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteUser(user.id)}>
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -235,7 +371,8 @@ const UsersContacts = () => {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))
+                  }
                 </TableBody>
               </Table>
             </Card>
@@ -249,11 +386,11 @@ const UsersContacts = () => {
                 <Input
                   placeholder="Search contacts..."
                   className="pl-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={contactSearchQuery}
+                  onChange={(e) => setContactSearchQuery(e.target.value)}
                 />
               </div>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={handleAddContact}>
                 <Plus className="h-4 w-4" />
                 Add Contact
               </Button>
@@ -265,13 +402,20 @@ const UsersContacts = () => {
                   <TableRow>
                     <TableHead>Contact</TableHead>
                     <TableHead>Details</TableHead>
+                    <TableHead>Address</TableHead>
                     <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockContacts.map((contact) => (
+                  {filteredContacts.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        No contacts found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                  filteredContacts.map((contact) => (
                     <TableRow key={contact.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -294,17 +438,15 @@ const UsersContacts = () => {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <p className="text-sm text-muted-foreground">{contact.address}</p>
+                      </TableCell>
+                      <TableCell>
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           contact.type === 'vendor' ? 'bg-purple-100 text-purple-700' :
                           contact.type === 'customer' ? 'bg-blue-100 text-blue-700' :
                           'bg-orange-100 text-orange-700'
                         }`}>
                           {contact.type === 'both' ? 'Customer & Vendor' : contact.type}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                          {contact.status}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
@@ -315,16 +457,12 @@ const UsersContacts = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-background">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditContact(contact.id)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Archive className="h-4 w-4 mr-2" />
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteContact(contact.id)}>
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -332,12 +470,158 @@ const UsersContacts = () => {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )))
+                  }
                 </TableBody>
               </Table>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* User Dialog */}
+        <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+              <DialogDescription>
+                {editingUser ? 'Update user information below.' : 'Enter new user information below.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="user-name">Name *</Label>
+                <Input
+                  id="user-name"
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  placeholder="Enter name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-email">Email *</Label>
+                <Input
+                  id="user-email"
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  placeholder="Enter email"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-phone">Phone *</Label>
+                <Input
+                  id="user-phone"
+                  value={userForm.phone}
+                  onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-address">Address</Label>
+                <Textarea
+                  id="user-address"
+                  value={userForm.address}
+                  onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
+                  placeholder="Enter address"
+                  rows={2}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="user-role">Role *</Label>
+                <Select value={userForm.role} onValueChange={(v) => setUserForm({ ...userForm, role: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="internal">Internal</SelectItem>
+                    <SelectItem value="portal">Portal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setUserDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveUser}>
+                {editingUser ? 'Update' : 'Add'} User
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Contact Dialog */}
+        <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingContact ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
+              <DialogDescription>
+                {editingContact ? 'Update contact information below.' : 'Enter new contact information below.'}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="contact-name">Name *</Label>
+                <Input
+                  id="contact-name"
+                  value={contactForm.name}
+                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                  placeholder="Enter name"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contact-email">Email *</Label>
+                <Input
+                  id="contact-email"
+                  type="email"
+                  value={contactForm.email}
+                  onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                  placeholder="Enter email"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contact-phone">Phone *</Label>
+                <Input
+                  id="contact-phone"
+                  value={contactForm.phone}
+                  onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contact-address">Address</Label>
+                <Textarea
+                  id="contact-address"
+                  value={contactForm.address}
+                  onChange={(e) => setContactForm({ ...contactForm, address: e.target.value })}
+                  placeholder="Enter address"
+                  rows={2}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="contact-type">Type *</Label>
+                <Select value={contactForm.type} onValueChange={(v) => setContactForm({ ...contactForm, type: v })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background">
+                    <SelectItem value="customer">Customer</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                    <SelectItem value="both">Customer & Vendor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setContactDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSaveContact}>
+                {editingContact ? 'Update' : 'Add'} Contact
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );
