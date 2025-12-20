@@ -10,7 +10,7 @@ from sqlmodel import select
 
 # Internal imports
 from backend.db import get_session
-from backend.models import Product, SaleOrder, SaleOrderLine, Invoice, InvoiceLine, User
+from backend.models import Product, SaleOrder, SaleOrderLine, Invoice, InvoiceLine, User, PaymentTerm
 from backend.auth import get_current_user
 from backend.websocket_manager import manager
 
@@ -321,3 +321,43 @@ async def get_order_detail(
         "invoice_id": invoice.id if invoice else None,
         "items": items,
     }
+
+
+# --- PUBLIC: Get Current Offers/Promos ---
+@router.get("/offers")
+async def get_offers(session: AsyncSession = Depends(get_session)):
+    """
+    Get all active payment terms/offers that have discounts.
+    This is a public endpoint for displaying promos on the homepage.
+    """
+    result = await session.exec(select(PaymentTerm))
+    terms = result.all()
+    
+    offers = []
+    for term in terms:
+        # Include terms that have any discount
+        if term.discount_percentage > 0 or term.early_payment_discount > 0:
+            offers.append({
+                "id": term.id,
+                "name": term.name,
+                "discount_percentage": term.discount_percentage,
+                "early_payment_discount": term.early_payment_discount,
+                "early_payment_days": term.early_payment_days,
+                "days": term.days,
+                "description": term.description,
+            })
+    
+    # If no discount-based offers, return all payment terms as general info
+    if not offers:
+        for term in terms:
+            offers.append({
+                "id": term.id,
+                "name": term.name,
+                "discount_percentage": term.discount_percentage,
+                "early_payment_discount": term.early_payment_discount,
+                "early_payment_days": term.early_payment_days,
+                "days": term.days,
+                "description": term.description,
+            })
+    
+    return offers

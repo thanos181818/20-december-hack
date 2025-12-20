@@ -77,6 +77,7 @@ class Product(SQLModel, table=True):
     category: Optional[str] = None
     product_type: ProductType = Field(default=ProductType.STORABLE)
     image_url: Optional[str] = None
+    images: Optional[str] = Field(default=None, sa_column=Column(Text))  # JSON array of image URLs
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     # 1. Pass the explicit column object to the Field

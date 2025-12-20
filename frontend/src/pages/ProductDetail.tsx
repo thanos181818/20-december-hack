@@ -18,8 +18,12 @@ import {
 interface BackendProduct {
   id: number;
   name: string;
+  description?: string;
   price: number;
   current_stock: number;
+  category?: string;
+  image_url?: string;
+  images?: string;
 }
 
 interface Product {
@@ -39,6 +43,26 @@ interface Product {
   published: boolean;
 }
 
+// Helper to determine category from backend category string
+const mapCategory = (backendCategory?: string): 'men' | 'women' | 'children' => {
+  if (!backendCategory) return 'men';
+  const lower = backendCategory.toLowerCase();
+  if (lower.includes('women') || lower.includes('woman')) return 'women';
+  if (lower.includes('kid') || lower.includes('child')) return 'children';
+  return 'men';
+};
+
+// Helper to determine type from backend category string
+const mapType = (backendCategory?: string): string => {
+  if (!backendCategory) return 'shirts';
+  const lower = backendCategory.toLowerCase();
+  if (lower.includes('kurta') || lower.includes('ethnic')) return 'kurtas';
+  if (lower.includes('dress') || lower.includes('gown')) return 'dresses';
+  if (lower.includes('jacket') || lower.includes('coat')) return 'jackets';
+  if (lower.includes('pant') || lower.includes('trouser')) return 'pants';
+  return 'shirts';
+};
+
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { addItem } = useCart();
@@ -51,34 +75,47 @@ const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchProduct = async () => {
       try {
         const res = await api.get<BackendProduct[]>('/orders/products');
+        
+        if (!isMounted) return;
+        
         const backendProduct = res.data.find(p => p.id.toString() === id);
         
         if (backendProduct) {
-          // Generate 3 placeholder images for the carousel
-          const baseImage = `https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(backendProduct.name)}`;
-          const images = [
-            baseImage,
-            `https://placehold.co/600x800/d1d5db/374151?text=${encodeURIComponent(backendProduct.name + ' - Side')}`,
-            `https://placehold.co/600x800/c7d2fe/4338ca?text=${encodeURIComponent(backendProduct.name + ' - Back')}`,
-          ];
+          // Parse images from comma-separated string or use image_url
+          let imageList: string[] = [];
+          if (backendProduct.images) {
+            imageList = backendProduct.images.split(',').map(img => img.trim()).filter(Boolean);
+          } else if (backendProduct.image_url) {
+            imageList = [backendProduct.image_url];
+          }
           
-          const CATEGORIES = ['men', 'women', 'children'] as const;
-          const TYPES = ['shirts', 'pants', 'kurtas', 'dresses', 'jackets'];
+          // Fallback to placeholders if no images
+          if (imageList.length === 0) {
+            const baseImage = `https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(backendProduct.name)}`;
+            imageList = [
+              baseImage,
+              `https://placehold.co/600x800/d1d5db/374151?text=${encodeURIComponent(backendProduct.name + ' - Side')}`,
+              `https://placehold.co/600x800/c7d2fe/4338ca?text=${encodeURIComponent(backendProduct.name + ' - Back')}`,
+            ];
+          }
+          
           const MATERIALS = ['cotton', 'silk', 'linen', 'wool', 'polyester'];
           
           const mappedProduct: Product = {
             id: backendProduct.id.toString(),
             name: backendProduct.name,
-            description: 'Premium quality apparel designed for comfort and style. Made with carefully selected materials for durability and a perfect fit.',
+            description: backendProduct.description || 'Premium quality apparel designed for comfort and style. Made with carefully selected materials for durability and a perfect fit.',
             price: backendProduct.price,
             tax: Math.round(backendProduct.price * 0.18),
             stock: backendProduct.current_stock,
-            images,
-            category: CATEGORIES[backendProduct.id % 3],
-            type: TYPES[backendProduct.id % 5],
+            images: imageList,
+            category: mapCategory(backendProduct.category),
+            type: mapType(backendProduct.category),
             material: MATERIALS[backendProduct.id % 5],
             colors: ['White', 'Blue', 'Black', 'Beige'],
             sizes: ['S', 'M', 'L', 'XL', 'XXL'],
@@ -94,11 +131,17 @@ const ProductDetail = () => {
         console.error('Failed to fetch product', error);
         toast.error('Could not load product details');
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProduct();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   if (loading) {

@@ -38,7 +38,8 @@ async def seed_database():
                 "current_stock": 45,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/src/assets/product-mens-shirt.jpg",
+                "images": "/src/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Elegant Silk Kurta",
@@ -47,16 +48,18 @@ async def seed_database():
                 "current_stock": 30,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg"
+                "image_url": "/src/assets/product-kurta.jpg",
+                "images": "/src/assets/product-kurta.jpg"
             },
             {
                 "name": "Designer Women's Dress",
-                "description": "Stunning evening dress with elegant design. Perfect for parties and formal gatherings. Premium fabric with comfortable fit.",
+                "description": "Stunning designer dress with elegant design. Perfect for parties and formal gatherings. Premium fabric with comfortable fit. Available in multiple views.",
                 "price": 4999.0,
                 "current_stock": 25,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-womens-dress.jpg"
+                "image_url": "/src/assets/woman-designer-1.1.jpeg",
+                "images": "/src/assets/woman-designer-1.1.jpeg,/src/assets/woman-designer-1.2.jpeg,/src/assets/woman-designer-1.3.jpeg"
             },
             {
                 "name": "Classic Leather Jacket",
@@ -65,7 +68,8 @@ async def seed_database():
                 "current_stock": 20,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg"
+                "image_url": "/src/assets/product-jacket.jpg",
+                "images": "/src/assets/product-jacket.jpg"
             },
             {
                 "name": "Cotton Casual Shirt - Blue",
@@ -74,7 +78,8 @@ async def seed_database():
                 "current_stock": 60,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/src/assets/product-mens-shirt.jpg",
+                "images": "/src/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Festive Kurta Set",
@@ -83,16 +88,18 @@ async def seed_database():
                 "current_stock": 35,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg"
+                "image_url": "/src/assets/product-kurta.jpg",
+                "images": "/src/assets/product-kurta.jpg"
             },
             {
                 "name": "Summer Floral Dress",
-                "description": "Light and breezy summer dress with beautiful floral patterns. Perfect for warm weather.",
+                "description": "Light and breezy summer dress with beautiful floral patterns. Perfect for warm weather outings and beach vacations.",
                 "price": 2999.0,
                 "current_stock": 50,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-womens-dress.jpg"
+                "image_url": "/src/assets/women-summer-1.1.jpeg",
+                "images": "/src/assets/women-summer-1.1.jpeg,/src/assets/women-summer-1.2.jpeg"
             },
             {
                 "name": "Denim Jacket - Classic Blue",
@@ -101,7 +108,8 @@ async def seed_database():
                 "current_stock": 40,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg"
+                "image_url": "/src/assets/product-jacket.jpg",
+                "images": "/src/assets/product-jacket.jpg"
             },
             {
                 "name": "Linen Blend Shirt - White",
@@ -110,7 +118,8 @@ async def seed_database():
                 "current_stock": 55,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/src/assets/product-mens-shirt.jpg",
+                "images": "/src/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Wedding Kurta - Gold",
@@ -119,16 +128,18 @@ async def seed_database():
                 "current_stock": 15,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg"
+                "image_url": "/src/assets/product-kurta.jpg",
+                "images": "/src/assets/product-kurta.jpg"
             },
             {
-                "name": "Evening Cocktail Dress",
-                "description": "Sophisticated cocktail dress for evening events. Elegant design with modern silhouette.",
-                "price": 6499.0,
-                "current_stock": 20,
+                "name": "Women's Denim Collection",
+                "description": "Stylish denim wear for women. Perfect layering piece for casual outfits. Trendy and comfortable fit with multiple views available.",
+                "price": 3299.0,
+                "current_stock": 40,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-womens-dress.jpg"
+                "image_url": "/src/assets/women-denim-1.1.jpeg",
+                "images": "/src/assets/women-denim-1.1.jpeg,/src/assets/women-denim-1.2.jpeg,/src/assets/women-denim-1.3.jpeg"
             },
             {
                 "name": "Winter Wool Coat",
@@ -137,7 +148,8 @@ async def seed_database():
                 "current_stock": 18,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg"
+                "image_url": "/src/assets/product-jacket.jpg",
+                "images": "/src/assets/product-jacket.jpg"
             },
             {
                 "name": "Casual Polo Shirt",
@@ -146,7 +158,8 @@ async def seed_database():
                 "current_stock": 70,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/src/assets/product-mens-shirt.jpg",
+                "images": "/src/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Party Wear Kurta",
@@ -155,16 +168,18 @@ async def seed_database():
                 "current_stock": 28,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg"
+                "image_url": "/src/assets/product-kurta.jpg",
+                "images": "/src/assets/product-kurta.jpg"
             },
             {
-                "name": "Casual Maxi Dress",
-                "description": "Comfortable maxi dress for casual day outs. Flowy and stylish.",
-                "price": 2499.0,
-                "current_stock": 42,
+                "name": "Classic Women's Dress",
+                "description": "Timeless classic dress for various occasions. Elegant and versatile.",
+                "price": 3999.0,
+                "current_stock": 28,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-womens-dress.jpg"
+                "image_url": "/src/assets/product-womens-dress.jpg",
+                "images": "/src/assets/product-womens-dress.jpg"
             },
             {
                 "name": "Bomber Jacket",
@@ -173,43 +188,8 @@ async def seed_database():
                 "current_stock": 32,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg"
-            },
-            {
-                "name": "Oxford Shirt - Navy",
-                "description": "Classic Oxford shirt in navy blue. Perfect for business casual.",
-                "price": 1999.0,
-                "current_stock": 48,
-                "category": "Men's Shirts",
-                "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg"
-            },
-            {
-                "name": "Pathani Kurta Set",
-                "description": "Traditional Pathani kurta with salwar. Comfortable and elegant.",
-                "price": 4499.0,
-                "current_stock": 22,
-                "category": "Ethnic Wear",
-                "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg"
-            },
-            {
-                "name": "Office Formal Dress",
-                "description": "Professional dress for office wear. Sophisticated and comfortable.",
-                "price": 3999.0,
-                "current_stock": 35,
-                "category": "Women's Wear",
-                "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-womens-dress.jpg"
-            },
-            {
-                "name": "Trench Coat - Beige",
-                "description": "Classic trench coat in beige. Timeless style for any season.",
-                "price": 9999.0,
-                "current_stock": 15,
-                "category": "Jackets & Coats",
-                "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg"
+                "image_url": "/src/assets/product-jacket.jpg",
+                "images": "/src/assets/product-jacket.jpg"
             }
         ]
         
@@ -759,6 +739,10 @@ async def seed_database():
         print(f"""
 📊 Summary:
    • Products: {len(products_data)}
+     - Men's Shirts: 5
+     - Ethnic Wear: 4
+     - Women's Wear: 4 (with multi-view images)
+     - Jackets & Coats: 3
    • Contacts: {len(contacts_data)} (Customers: 3, Vendors: 3)
    • Payment Terms: {len(terms_data)}
    • Sales Orders: 3 (2 confirmed, 1 draft)

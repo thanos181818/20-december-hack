@@ -13,9 +13,13 @@ import { toast } from 'sonner';
 interface BackendProduct {
   id: number;
   name: string;
+  description?: string;
   price: number;
   current_stock: number;
-  version_id: number;
+  category?: string;
+  image_url?: string;
+  images?: string;
+  version_id?: number;
 }
 
 // FIXED: Define strict types to match ProductCard expectations
@@ -43,52 +47,104 @@ const priceRanges = [
   { label: 'Above ₹5,000', min: 5000, max: Infinity },
 ];
 
-// Constants for cyclic assignment
+// Constants for category filter
 const CATEGORIES = ['men', 'women', 'children'] as const;
+
+// Helper to determine category from backend category string
+const mapCategory = (backendCategory?: string): 'men' | 'women' | 'children' => {
+  if (!backendCategory) return 'men';
+  const lower = backendCategory.toLowerCase();
+  if (lower.includes('women') || lower.includes('woman')) return 'women';
+  if (lower.includes('kid') || lower.includes('child')) return 'children';
+  return 'men';
+};
+
+// Helper to determine type from backend category string
+const mapType = (backendCategory?: string): 'shirts' | 'pants' | 'kurtas' | 'dresses' | 'jackets' => {
+  if (!backendCategory) return 'shirts';
+  const lower = backendCategory.toLowerCase();
+  if (lower.includes('kurta') || lower.includes('ethnic')) return 'kurtas';
+  if (lower.includes('dress') || lower.includes('gown')) return 'dresses';
+  if (lower.includes('jacket') || lower.includes('coat')) return 'jackets';
+  if (lower.includes('pant') || lower.includes('trouser')) return 'pants';
+  return 'shirts';
+};
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch from Backend
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchProducts = async () => {
       try {
+        setLoading(true);
+        setError(null);
         const res = await api.get<BackendProduct[]>('/orders/products');
         
+        if (!isMounted) return;
+        
+        if (!res.data || !Array.isArray(res.data)) {
+          throw new Error('Invalid response format');
+        }
+        
         // Map backend data to frontend UI structure
-        const mappedProducts: Product[] = res.data.map((p) => ({
-          id: p.id.toString(),
-          name: p.name,
-          description: 'Premium quality apparel designed for comfort and style.',
-          price: p.price,
-          tax: p.price * 0.18, 
-          stock: p.current_stock,
-          images: [`https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(p.name)}`],
+        const mappedProducts: Product[] = res.data.map((p) => {
+          // Parse images from comma-separated string or use image_url
+          let imageList: string[] = [];
+          if (p.images) {
+            imageList = p.images.split(',').map(img => img.trim()).filter(Boolean);
+          } else if (p.image_url) {
+            imageList = [p.image_url];
+          }
           
-          // FIXED: Explicit casting to specific union types
-          category: CATEGORIES[p.id % 3], 
-          type: 'shirts' as const, 
-          material: 'cotton' as const,
+          // Fallback to placeholder if no images
+          if (imageList.length === 0) {
+            imageList = [`https://placehold.co/600x800/e2e8f0/1e293b?text=${encodeURIComponent(p.name)}`];
+          }
           
-          colors: ['White', 'Blue', 'Black'],
-          sizes: ['S', 'M', 'L', 'XL'],
-          featured: p.id % 2 === 0,
-          published: true
-        }));
+          return {
+            id: p.id.toString(),
+            name: p.name,
+            description: p.description || 'Premium quality apparel designed for comfort and style.',
+            price: p.price,
+            tax: p.price * 0.18, 
+            stock: p.current_stock,
+            images: imageList,
+            category: mapCategory(p.category),
+            type: mapType(p.category),
+            material: 'cotton' as const,
+            colors: ['White', 'Blue', 'Black'],
+            sizes: ['S', 'M', 'L', 'XL'],
+            featured: p.id % 2 === 0,
+            published: true
+          };
+        });
 
         setProducts(mappedProducts);
-      } catch (error) {
-        console.error("Failed to fetch products", error);
-        toast.error("Could not load products from server");
+      } catch (err) {
+        console.error("Failed to fetch products", err);
+        if (isMounted) {
+          setError("Could not load products from server");
+          toast.error("Could not load products from server");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchProducts();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const categoryParam = searchParams.get('category');
@@ -294,6 +350,13 @@ const Products = () => {
                   {[1, 2, 3, 4, 5, 6].map((n) => (
                     <div key={n} className="h-[400px] bg-muted/50 animate-pulse rounded-lg" />
                   ))}
+                </div>
+              ) : error ? (
+                <div className="text-center py-16">
+                  <p className="text-destructive text-lg mb-4">{error}</p>
+                  <Button variant="outline" onClick={() => window.location.reload()}>
+                    Try Again
+                  </Button>
                 </div>
               ) : filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
