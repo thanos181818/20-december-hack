@@ -1,0 +1,18 @@
+version: '3.8' # This line is fine, just a warning from docker compose
+
+services:
+  db:
+    image: postgres:15
+    container_name: appareldesk_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: appareldesk
+    ports:
+      - "5433:5432" # This is correct: maps host port 5433 to container port 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
