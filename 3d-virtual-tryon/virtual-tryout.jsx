@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 const VirtualTryOn = () => {
   const canvasRef = useRef(null);
@@ -7,6 +8,7 @@ const VirtualTryOn = () => {
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const mannequinRef = useRef(null);
+  const controlsRef = useRef(null);
   const clothingMeshesRef = useRef({});
   const animationFrameRef = useRef(null);
   
@@ -88,6 +90,10 @@ const VirtualTryOn = () => {
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
     scene.add(ambientLight);
 
+    // Hemisphere for soft, skin-friendly lighting
+    const hemi = new THREE.HemisphereLight(0xfff7ee, 0x444444, 0.35);
+    scene.add(hemi);
+
     const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
     mainLight.position.set(5, 10, 5);
     mainLight.castShadow = true;
@@ -118,14 +124,22 @@ const VirtualTryOn = () => {
     // Create mannequin
     createMannequin(scene, bodyMetrics);
 
+    // Controls (enable drag-to-rotate and autorotate)
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.autoRotate = isRotating;
+    controls.autoRotateSpeed = 1.2;
+    // focus on mannequin chest height (approx)
+    controls.target.set(0, (bodyMetrics.height / 170) * 1.1, 0);
+    controls.update();
+    controlsRef.current = controls;
+
     // Animation loop
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
-      
-      if (mannequinRef.current && isRotating) {
-        mannequinRef.current.rotation.y += 0.01;
-      }
-      
+      if (controlsRef.current) controlsRef.current.update();
       renderer.render(scene, camera);
     };
     animate();
@@ -162,8 +176,21 @@ const VirtualTryOn = () => {
           updateClothing(type, wornClothing[type]);
         }
       });
+      // Update controls target to new mannequin center
+      if (controlsRef.current) {
+        const heightScale = bodyMetrics.height / 170;
+        controlsRef.current.target.set(0, 1.1 * heightScale, 0);
+        controlsRef.current.update();
+      }
     }
   }, [bodyMetrics]);
+
+  // Sync autorotate toggling with OrbitControls
+  useEffect(() => {
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate = isRotating;
+    }
+  }, [isRotating]);
 
   const createMannequin = (scene, metrics) => {
     const mannequinGroup = new THREE.Group();
@@ -175,22 +202,24 @@ const VirtualTryOn = () => {
     const hipScale = metrics.hips / 95;
     const shoulderScale = metrics.shoulders / 40;
 
-    // Skin material
-    const skinMaterial = new THREE.MeshStandardMaterial({
-      color: 0xFFDDCC,
-      roughness: 0.7,
-      metalness: 0.1
+    // Skin material - improved PBR-like material
+    const skinMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0xF1D7C6,
+      roughness: 0.55,
+      metalness: 0.0,
+      clearcoat: 0.06,
+      clearcoatRoughness: 0.5
     });
 
     // Head
-    const headGeometry = new THREE.SphereGeometry(0.13, 32, 32);
+    const headGeometry = new THREE.SphereGeometry(0.13, 48, 48);
     const head = new THREE.Mesh(headGeometry, skinMaterial);
     head.position.y = 1.7 * heightScale;
     head.castShadow = true;
     mannequinGroup.add(head);
 
     // Neck
-    const neckGeometry = new THREE.CylinderGeometry(0.06, 0.07, 0.12, 16);
+    const neckGeometry = new THREE.CylinderGeometry(0.06, 0.07, 0.12, 32);
     const neck = new THREE.Mesh(neckGeometry, skinMaterial);
     neck.position.y = 1.56 * heightScale;
     neck.castShadow = true;
@@ -201,7 +230,7 @@ const VirtualTryOn = () => {
       0.12 * chestScale, 
       0.14 * chestScale, 
       0.35 * heightScale, 
-      32
+      48
     );
     const torso = new THREE.Mesh(torsoGeometry, skinMaterial);
     torso.position.y = 1.3 * heightScale;
@@ -233,7 +262,7 @@ const VirtualTryOn = () => {
     mannequinGroup.add(hips);
 
     // Shoulders
-    const shoulderGeometry = new THREE.SphereGeometry(0.08 * shoulderScale, 16, 16);
+    const shoulderGeometry = new THREE.SphereGeometry(0.08 * shoulderScale, 32, 32);
     
     const leftShoulder = new THREE.Mesh(shoulderGeometry, skinMaterial);
     leftShoulder.position.set(-0.18 * shoulderScale, 1.45 * heightScale, 0);
@@ -246,7 +275,7 @@ const VirtualTryOn = () => {
     mannequinGroup.add(rightShoulder);
 
     // Arms
-    const armGeometry = new THREE.CylinderGeometry(0.04, 0.035, 0.5 * heightScale, 16);
+    const armGeometry = new THREE.CylinderGeometry(0.04, 0.035, 0.5 * heightScale, 32);
     
     const leftArm = new THREE.Mesh(armGeometry, skinMaterial);
     leftArm.position.set(-0.2 * shoulderScale, 1.15 * heightScale, 0);
@@ -259,7 +288,7 @@ const VirtualTryOn = () => {
     mannequinGroup.add(rightArm);
 
     // Forearms
-    const forearmGeometry = new THREE.CylinderGeometry(0.035, 0.03, 0.45 * heightScale, 16);
+    const forearmGeometry = new THREE.CylinderGeometry(0.035, 0.03, 0.45 * heightScale, 32);
     
     const leftForearm = new THREE.Mesh(forearmGeometry, skinMaterial);
     leftForearm.position.set(-0.2 * shoulderScale, 0.65 * heightScale, 0);
@@ -272,7 +301,7 @@ const VirtualTryOn = () => {
     mannequinGroup.add(rightForearm);
 
     // Hands
-    const handGeometry = new THREE.SphereGeometry(0.04, 16, 16);
+    const handGeometry = new THREE.SphereGeometry(0.04, 24, 24);
     
     const leftHand = new THREE.Mesh(handGeometry, skinMaterial);
     leftHand.position.set(-0.2 * shoulderScale, 0.38 * heightScale, 0);
@@ -285,7 +314,7 @@ const VirtualTryOn = () => {
     mannequinGroup.add(rightHand);
 
     // Legs
-    const legGeometry = new THREE.CylinderGeometry(0.07 * hipScale, 0.055, 0.55 * heightScale, 16);
+    const legGeometry = new THREE.CylinderGeometry(0.07 * hipScale, 0.055, 0.55 * heightScale, 32);
     
     const leftLeg = new THREE.Mesh(legGeometry, skinMaterial);
     leftLeg.position.set(-0.08 * hipScale, 0.5 * heightScale, 0);
@@ -298,7 +327,7 @@ const VirtualTryOn = () => {
     mannequinGroup.add(rightLeg);
 
     // Lower legs
-    const lowerLegGeometry = new THREE.CylinderGeometry(0.055, 0.045, 0.5 * heightScale, 16);
+    const lowerLegGeometry = new THREE.CylinderGeometry(0.055, 0.045, 0.5 * heightScale, 32);
     
     const leftLowerLeg = new THREE.Mesh(lowerLegGeometry, skinMaterial);
     leftLowerLeg.position.set(-0.08 * hipScale, 0.15 * heightScale, 0);
@@ -327,10 +356,12 @@ const VirtualTryOn = () => {
     const waistScale = bodyMetrics.waist / 75;
     const hipScale = bodyMetrics.hips / 95;
 
-    const clothingMaterial = new THREE.MeshStandardMaterial({
+    const clothingMaterial = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(item.color),
-      roughness: item.fabric === 'Leather' ? 0.3 : item.fabric === 'Silk' ? 0.2 : 0.8,
-      metalness: item.fabric === 'Leather' ? 0.4 : 0.1
+      roughness: item.fabric === 'Leather' ? 0.35 : item.fabric === 'Silk' ? 0.18 : 0.65,
+      metalness: item.fabric === 'Leather' ? 0.25 : 0.0,
+      clearcoat: item.fabric === 'Silk' ? 0.12 : 0.0,
+      clearcoatRoughness: 0.4
     });
 
     let clothingMesh;
