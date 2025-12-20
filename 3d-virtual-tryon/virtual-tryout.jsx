@@ -119,7 +119,7 @@ const VirtualTryOn = () => {
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
     floor.rotation.x = -Math.PI / 2;
     // push the floor slightly down so shoes/feet remain visible
-    const floorOffset = -0.12 * (bodyMetrics.height / 170);
+    const floorOffset = -0.2 * (bodyMetrics.height / 170);
     floor.position.y = floorOffset;
     floor.receiveShadow = true;
     scene.add(floor);
@@ -200,147 +200,198 @@ const VirtualTryOn = () => {
     
     // Scale factors based on body metrics
     const heightScale = metrics.height / 170;
-    const chestScale = metrics.chest / 90;
-    const waistScale = metrics.waist / 75;
+    const chestScale = metrics.waist / 75;  // SWAPPED
+    const waistScale = metrics.chest / 90;  // SWAPPED
     const hipScale = metrics.hips / 95;
     const shoulderScale = metrics.shoulders / 40;
 
-    // Skin material - improved PBR-like material
-    const skinMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0xF1D7C6,
-      roughness: 0.55,
-      metalness: 0.0,
-      clearcoat: 0.06,
-      clearcoatRoughness: 0.5
+    // Clean, modern skin material
+    const skinMaterial = new THREE.MeshStandardMaterial({
+      color: 0xE8D4C8,
+      roughness: 0.6,
+      metalness: 0.1,
+      flatShading: false
     });
 
-    // Head
-    const headGeometry = new THREE.SphereGeometry(0.13, 48, 48);
+    // HEAD - Simple sphere
+    const headGeometry = new THREE.SphereGeometry(0.13 * heightScale, 32, 32);
     const head = new THREE.Mesh(headGeometry, skinMaterial);
-    head.position.y = 1.7 * heightScale;
+    head.position.y = 1.65 * heightScale;
     head.castShadow = true;
     mannequinGroup.add(head);
 
-    // Neck
-    const neckGeometry = new THREE.CylinderGeometry(0.06, 0.07, 0.12, 32);
+    // NECK - Smooth cylinder
+    const neckGeometry = new THREE.CylinderGeometry(
+      0.055 * heightScale, 
+      0.065 * heightScale, 
+      0.12 * heightScale, 
+      32
+    );
     const neck = new THREE.Mesh(neckGeometry, skinMaterial);
-    neck.position.y = 1.56 * heightScale;
+    neck.position.y = 1.53 * heightScale;
     neck.castShadow = true;
     mannequinGroup.add(neck);
 
-    // Torso (upper)
-    const torsoGeometry = new THREE.CylinderGeometry(
-      0.12 * chestScale, 
-      0.14 * chestScale, 
-      0.35 * heightScale, 
-      48
-    );
+    // TORSO - Single unified piece using LatheGeometry for smooth transitions
+    const torsoPoints = [];
+    const torsoSegments = 80;
+    const torsoHeight = 0.75 * heightScale;
+    
+    for (let i = 0; i <= torsoSegments; i++) {
+      const t = i / torsoSegments;
+      const y = torsoHeight * (t - 0.5);
+      
+      let radius;
+      if (t < 0.1) {
+        // Neck to shoulders transition
+        radius = THREE.MathUtils.lerp(0.065 * heightScale, 0.16 * chestScale, t / 0.1);
+      } else if (t < 0.35) {
+        // Upper chest area - controlled by chest (which is wider)
+        const localT = (t - 0.1) / 0.25;
+        radius = THREE.MathUtils.lerp(0.16 * chestScale, 0.18 * chestScale, localT);
+      } else if (t < 0.55) {
+        // Mid chest - peak chest width
+        radius = 0.18 * chestScale;
+      } else if (t < 0.75) {
+        // Tapering to waist - controlled by waist (which is narrower)
+        const localT = (t - 0.55) / 0.2;
+        radius = THREE.MathUtils.lerp(0.18 * chestScale, 0.135 * waistScale, localT);
+      } else {
+        // Waist expanding to hips
+        const localT = (t - 0.75) / 0.25;
+        radius = THREE.MathUtils.lerp(0.135 * waistScale, 0.16 * hipScale, localT);
+      }
+      
+      torsoPoints.push(new THREE.Vector2(radius, y));
+    }
+    
+    const torsoGeometry = new THREE.LatheGeometry(torsoPoints, 48);
     const torso = new THREE.Mesh(torsoGeometry, skinMaterial);
-    torso.position.y = 1.3 * heightScale;
+    torso.position.y = 1.095 * heightScale;
     torso.castShadow = true;
     mannequinGroup.add(torso);
 
-    // Waist
-    const waistGeometry = new THREE.CylinderGeometry(
-      0.14 * chestScale,
-      0.11 * waistScale,
-      0.15 * heightScale,
-      32
-    );
-    const waist = new THREE.Mesh(waistGeometry, skinMaterial);
-    waist.position.y = 1.05 * heightScale;
-    waist.castShadow = true;
-    mannequinGroup.add(waist);
-
-    // Hips
-    const hipGeometry = new THREE.CylinderGeometry(
-      0.11 * waistScale,
-      0.13 * hipScale,
-      0.15 * heightScale,
-      32
-    );
-    const hips = new THREE.Mesh(hipGeometry, skinMaterial);
-    hips.position.y = 0.9 * heightScale;
-    hips.castShadow = true;
-    mannequinGroup.add(hips);
-
-    // Shoulders
-    const shoulderGeometry = new THREE.SphereGeometry(0.08 * shoulderScale, 32, 32);
+    // SHOULDERS - Rounded caps
+    const shoulderGeometry = new THREE.SphereGeometry(0.065 * shoulderScale, 24, 24);
     
     const leftShoulder = new THREE.Mesh(shoulderGeometry, skinMaterial);
-    leftShoulder.position.set(-0.18 * shoulderScale, 1.45 * heightScale, 0);
+    leftShoulder.position.set(-0.215 * shoulderScale, 1.43 * heightScale, 0);
     leftShoulder.castShadow = true;
     mannequinGroup.add(leftShoulder);
 
     const rightShoulder = new THREE.Mesh(shoulderGeometry, skinMaterial);
-    rightShoulder.position.set(0.18 * shoulderScale, 1.45 * heightScale, 0);
+    rightShoulder.position.set(0.215 * shoulderScale, 1.43 * heightScale, 0);
     rightShoulder.castShadow = true;
     mannequinGroup.add(rightShoulder);
 
-    // Arms
-    const armGeometry = new THREE.CylinderGeometry(0.04, 0.035, 0.5 * heightScale, 32);
+    // ARMS - Smooth tapered using LatheGeometry
+    const armPoints = [];
+    for (let i = 0; i <= 32; i++) {
+      const t = i / 32;
+      const y = 0.48 * heightScale * (t - 0.5);
+      const radius = THREE.MathUtils.lerp(0.042, 0.036, t);
+      armPoints.push(new THREE.Vector2(radius, y));
+    }
+    const armGeometry = new THREE.LatheGeometry(armPoints, 24);
     
     const leftArm = new THREE.Mesh(armGeometry, skinMaterial);
-    leftArm.position.set(-0.2 * shoulderScale, 1.15 * heightScale, 0);
+    leftArm.position.set(-0.22 * shoulderScale, 1.14 * heightScale, 0);
     leftArm.castShadow = true;
     mannequinGroup.add(leftArm);
 
     const rightArm = new THREE.Mesh(armGeometry, skinMaterial);
-    rightArm.position.set(0.2 * shoulderScale, 1.15 * heightScale, 0);
+    rightArm.position.set(0.22 * shoulderScale, 1.14 * heightScale, 0);
     rightArm.castShadow = true;
     mannequinGroup.add(rightArm);
 
-    // Forearms
-    const forearmGeometry = new THREE.CylinderGeometry(0.035, 0.03, 0.45 * heightScale, 32);
+    // FOREARMS
+    const forearmPoints = [];
+    for (let i = 0; i <= 32; i++) {
+      const t = i / 32;
+      const y = 0.43 * heightScale * (t - 0.5);
+      const radius = THREE.MathUtils.lerp(0.036, 0.031, t);
+      forearmPoints.push(new THREE.Vector2(radius, y));
+    }
+    const forearmGeometry = new THREE.LatheGeometry(forearmPoints, 24);
     
     const leftForearm = new THREE.Mesh(forearmGeometry, skinMaterial);
-    leftForearm.position.set(-0.2 * shoulderScale, 0.65 * heightScale, 0);
+    leftForearm.position.set(-0.22 * shoulderScale, 0.66 * heightScale, 0);
     leftForearm.castShadow = true;
     mannequinGroup.add(leftForearm);
 
     const rightForearm = new THREE.Mesh(forearmGeometry, skinMaterial);
-    rightForearm.position.set(0.2 * shoulderScale, 0.65 * heightScale, 0);
+    rightForearm.position.set(0.22 * shoulderScale, 0.66 * heightScale, 0);
     rightForearm.castShadow = true;
     mannequinGroup.add(rightForearm);
 
-    // Hands
-    const handGeometry = new THREE.SphereGeometry(0.04, 24, 24);
+    // HANDS - Slightly elongated spheres
+    const handGeometry = new THREE.SphereGeometry(0.035, 16, 16);
+    handGeometry.scale(1, 1.2, 0.7);
     
     const leftHand = new THREE.Mesh(handGeometry, skinMaterial);
-    leftHand.position.set(-0.2 * shoulderScale, 0.38 * heightScale, 0);
+    leftHand.position.set(-0.22 * shoulderScale, 0.42 * heightScale, 0);
     leftHand.castShadow = true;
     mannequinGroup.add(leftHand);
 
     const rightHand = new THREE.Mesh(handGeometry, skinMaterial);
-    rightHand.position.set(0.2 * shoulderScale, 0.38 * heightScale, 0);
+    rightHand.position.set(0.22 * shoulderScale, 0.42 * heightScale, 0);
     rightHand.castShadow = true;
     mannequinGroup.add(rightHand);
 
-    // Legs
-    const legGeometry = new THREE.CylinderGeometry(0.07 * hipScale, 0.055, 0.55 * heightScale, 32);
+    // LEGS - Smooth tapered from hips to ankles
+    const legPoints = [];
+    for (let i = 0; i <= 60; i++) {
+      const t = i / 60;
+      const y = 0.95 * heightScale * (t - 0.5);
+      let radius;
+      if (t < 0.45) {
+        // Thigh - controlled by hip scale
+        radius = THREE.MathUtils.lerp(0.082 * hipScale, 0.062, t / 0.45);
+      } else if (t < 0.55) {
+        // Knee area
+        radius = 0.06;
+      } else {
+        // Calf tapering down
+        radius = THREE.MathUtils.lerp(0.06, 0.046, (t - 0.55) / 0.45);
+      }
+      legPoints.push(new THREE.Vector2(radius, y));
+    }
+    const legGeometry = new THREE.LatheGeometry(legPoints, 32);
     
     const leftLeg = new THREE.Mesh(legGeometry, skinMaterial);
-    leftLeg.position.set(-0.08 * hipScale, 0.5 * heightScale, 0);
+    leftLeg.position.set(-0.095 * hipScale, 0.245 * heightScale, 0);
     leftLeg.castShadow = true;
     mannequinGroup.add(leftLeg);
 
     const rightLeg = new THREE.Mesh(legGeometry, skinMaterial);
-    rightLeg.position.set(0.08 * hipScale, 0.5 * heightScale, 0);
+    rightLeg.position.set(0.095 * hipScale, 0.245 * heightScale, 0);
     rightLeg.castShadow = true;
     mannequinGroup.add(rightLeg);
 
-    // Lower legs
-    const lowerLegGeometry = new THREE.CylinderGeometry(0.055, 0.045, 0.5 * heightScale, 32);
+    // FEET - Rounded boxes
+    const footGeometry = new THREE.BoxGeometry(0.075, 0.055, 0.17, 8, 4, 8);
+    const footPositions = footGeometry.attributes.position;
+    for (let i = 0; i < footPositions.count; i++) {
+      const x = footPositions.getX(i);
+      const z = footPositions.getZ(i);
+      if (Math.abs(z) > 0.06) {
+        footPositions.setX(i, x * 0.85);
+      }
+    }
+    footGeometry.computeVertexNormals();
     
-    const leftLowerLeg = new THREE.Mesh(lowerLegGeometry, skinMaterial);
-    leftLowerLeg.position.set(-0.08 * hipScale, 0.15 * heightScale, 0);
-    leftLowerLeg.castShadow = true;
-    mannequinGroup.add(leftLowerLeg);
+    const leftFoot = new THREE.Mesh(footGeometry, skinMaterial);
+    leftFoot.position.set(-0.095 * hipScale, -0.23 * heightScale, 0.04);
+    leftFoot.castShadow = true;
+    mannequinGroup.add(leftFoot);
 
-    const rightLowerLeg = new THREE.Mesh(lowerLegGeometry, skinMaterial);
-    rightLowerLeg.position.set(0.08 * hipScale, 0.15 * heightScale, 0);
-    rightLowerLeg.castShadow = true;
-    mannequinGroup.add(rightLowerLeg);
+    const rightFoot = new THREE.Mesh(footGeometry, skinMaterial);
+    rightFoot.position.set(0.095 * hipScale, -0.23 * heightScale, 0.04);
+    rightFoot.castShadow = true;
+    mannequinGroup.add(rightFoot);
+
+    // Elevate entire mannequin slightly above ground
+    mannequinGroup.position.y = 0.15 * heightScale;
 
     mannequinRef.current = mannequinGroup;
     scene.add(mannequinGroup);
@@ -355,9 +406,10 @@ const VirtualTryOn = () => {
     }
 
     const heightScale = bodyMetrics.height / 170;
-    const chestScale = bodyMetrics.chest / 90;
-    const waistScale = bodyMetrics.waist / 75;
+    const chestScale = bodyMetrics.waist / 75;  // SWAPPED to match mannequin
+    const waistScale = bodyMetrics.chest / 90;  // SWAPPED to match mannequin
     const hipScale = bodyMetrics.hips / 95;
+    const shoulderScale = bodyMetrics.shoulders / 40;
 
     const clothingMaterial = new THREE.MeshPhysicalMaterial({
       color: new THREE.Color(item.color),
@@ -370,78 +422,138 @@ const VirtualTryOn = () => {
     let clothingMesh;
 
     if (type === 'top') {
-      // Create shirt/top
+      // Create shirt/top - Matches torso exactly but slightly larger to cover
       const topGroup = new THREE.Group();
       
-      // Main body
-      const bodyGeometry = new THREE.CylinderGeometry(
-        0.13 * chestScale,
-        0.15 * waistScale,
-        0.5 * heightScale,
-        32
-      );
+      const topPoints = [];
+      const topSegments = 80;
+      const topHeight = 0.84 * heightScale;  // Extends from neck to below waist
+      
+      for (let i = 0; i <= topSegments; i++) {
+        const t = i / topSegments;
+        const y = topHeight * (t - 0.5);
+        
+        let radius;
+        if (t < 0.08) {
+          // Neck area - covers the neck
+          radius = THREE.MathUtils.lerp(0.068 * heightScale, 0.175 * chestScale, t / 0.08);
+        } else if (t < 0.32) {
+          // Upper chest - follows chest dimensions
+          const localT = (t - 0.08) / 0.24;
+          radius = THREE.MathUtils.lerp(0.175 * chestScale, 0.195 * chestScale, localT);
+        } else if (t < 0.52) {
+          // Peak chest area
+          radius = 0.195 * chestScale;
+        } else if (t < 0.72) {
+          // Tapering to waist
+          const localT = (t - 0.52) / 0.2;
+          radius = THREE.MathUtils.lerp(0.195 * chestScale, 0.15 * waistScale, localT);
+        } else {
+          // Lower waist to hips area
+          const localT = (t - 0.72) / 0.28;
+          radius = THREE.MathUtils.lerp(0.15 * waistScale, 0.175 * hipScale, localT);
+        }
+        
+        topPoints.push(new THREE.Vector2(radius, y));
+      }
+      
+      const bodyGeometry = new THREE.LatheGeometry(topPoints, 36);
       const body = new THREE.Mesh(bodyGeometry, clothingMaterial);
-      body.position.y = 1.18 * heightScale;
+      body.position.y = 1.14 * heightScale;  // Positioned to cover from neck down
       body.castShadow = true;
       topGroup.add(body);
 
-      // Sleeves
-      const sleeveGeometry = new THREE.CylinderGeometry(0.045, 0.04, 0.5 * heightScale, 16);
+      // Sleeves - Match arm dimensions
+      const sleevePoints = [];
+      for (let i = 0; i <= 28; i++) {
+        const t = i / 28;
+        const y = 0.5 * heightScale * (t - 0.5);
+        const radius = THREE.MathUtils.lerp(0.05, 0.044, t);
+        sleevePoints.push(new THREE.Vector2(radius, y));
+      }
+      const sleeveGeometry = new THREE.LatheGeometry(sleevePoints, 20);
       
       const leftSleeve = new THREE.Mesh(sleeveGeometry, clothingMaterial);
-      leftSleeve.position.set(-0.2 * (bodyMetrics.shoulders / 40), 1.15 * heightScale, 0);
+      leftSleeve.position.set(-0.22 * shoulderScale, 1.14 * heightScale, 0);
       leftSleeve.castShadow = true;
       topGroup.add(leftSleeve);
 
       const rightSleeve = new THREE.Mesh(sleeveGeometry, clothingMaterial);
-      rightSleeve.position.set(0.2 * (bodyMetrics.shoulders / 40), 1.15 * heightScale, 0);
+      rightSleeve.position.set(0.22 * shoulderScale, 1.14 * heightScale, 0);
       rightSleeve.castShadow = true;
       topGroup.add(rightSleeve);
 
       clothingMesh = topGroup;
     } else if (type === 'bottom') {
-      // Create pants/bottoms
+      // Create pants/bottoms - Matches leg dimensions exactly
       const bottomGroup = new THREE.Group();
 
-      // Waist band
+      // Hip/Waist band - covers top of hips
       const waistGeometry = new THREE.CylinderGeometry(
-        0.12 * waistScale,
-        0.12 * hipScale,
-        0.1 * heightScale,
-        32
+        0.175 * hipScale,
+        0.175 * hipScale,
+        0.14 * heightScale,
+        36
       );
       const waistBand = new THREE.Mesh(waistGeometry, clothingMaterial);
-      waistBand.position.y = 0.95 * heightScale;
+      waistBand.position.y = 0.7 * heightScale;
       waistBand.castShadow = true;
       bottomGroup.add(waistBand);
 
-      // Pants legs
-      const legGeometry = new THREE.CylinderGeometry(0.075 * hipScale, 0.06, 0.85 * heightScale, 16);
+      // Pants legs - perfectly match leg geometry
+      const pantsLegPoints = [];
+      for (let i = 0; i <= 60; i++) {
+        const t = i / 60;
+        const y = 0.98 * heightScale * (t - 0.5);
+        let radius;
+        if (t < 0.44) {
+          // Thigh area - matches hip-scaled thighs
+          radius = THREE.MathUtils.lerp(0.088 * hipScale, 0.068, t / 0.44);
+        } else if (t < 0.54) {
+          // Knee area
+          radius = 0.066;
+        } else {
+          // Calf area - tapers down
+          radius = THREE.MathUtils.lerp(0.066, 0.053, (t - 0.54) / 0.46);
+        }
+        pantsLegPoints.push(new THREE.Vector2(radius, y));
+      }
+      const pantsLegGeometry = new THREE.LatheGeometry(pantsLegPoints, 28);
       
-      const leftLeg = new THREE.Mesh(legGeometry, clothingMaterial);
-      leftLeg.position.set(-0.08 * hipScale, 0.45 * heightScale, 0);
+      const leftLeg = new THREE.Mesh(pantsLegGeometry, clothingMaterial);
+      leftLeg.position.set(-0.095 * hipScale, 0.24 * heightScale, 0);
       leftLeg.castShadow = true;
       bottomGroup.add(leftLeg);
 
-      const rightLeg = new THREE.Mesh(legGeometry, clothingMaterial);
-      rightLeg.position.set(0.08 * hipScale, 0.45 * heightScale, 0);
+      const rightLeg = new THREE.Mesh(pantsLegGeometry, clothingMaterial);
+      rightLeg.position.set(0.095 * hipScale, 0.24 * heightScale, 0);
       rightLeg.castShadow = true;
       bottomGroup.add(rightLeg);
 
       clothingMesh = bottomGroup;
     } else if (type === 'shoes') {
-      // Create shoes
+      // Create shoes - Match foot dimensions and position
       const shoesGroup = new THREE.Group();
 
-      const shoeGeometry = new THREE.BoxGeometry(0.08, 0.06, 0.15);
+      const shoeGeometry = new THREE.BoxGeometry(0.082, 0.062, 0.18, 8, 4, 10);
+      const positions = shoeGeometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        const x = positions.getX(i);
+        const z = positions.getZ(i);
+        // Round toe area
+        if (Math.abs(z) > 0.07) {
+          positions.setX(i, x * 0.82);
+        }
+      }
+      shoeGeometry.computeVertexNormals();
       
       const leftShoe = new THREE.Mesh(shoeGeometry, clothingMaterial);
-      leftShoe.position.set(-0.08 * hipScale, -0.08 * heightScale, 0.03);
+      leftShoe.position.set(-0.095 * hipScale, -0.23 * heightScale, 0.04);
       leftShoe.castShadow = true;
       shoesGroup.add(leftShoe);
 
       const rightShoe = new THREE.Mesh(shoeGeometry, clothingMaterial);
-      rightShoe.position.set(0.08 * hipScale, -0.08 * heightScale, 0.03);
+      rightShoe.position.set(0.095 * hipScale, -0.23 * heightScale, 0.04);
       rightShoe.castShadow = true;
       shoesGroup.add(rightShoe);
 
