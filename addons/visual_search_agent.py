@@ -69,7 +69,7 @@ def display_results(query_path, match_path, score):
 if __name__ == "__main__":
     # CONFIGURATION
     FOLDER_PATH = "catalog_images"      # Your folder with many images
-    INPUT_IMAGE = "user_query3.jpg"      # The single image you provide
+    INPUT_IMAGE = "user_query2.jpg"      # The single image you provide
     
     # Create folder if it doesn't exist for the user
     if not os.path.exists(FOLDER_PATH):

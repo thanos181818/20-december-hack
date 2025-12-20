@@ -30,7 +30,7 @@ MOCK_PRODUCTS = [
     {
         "default_code": "HOODIE-99",
         "name": "Heavy Winter Hoodie",
-        "qty_available": 150,
+        "qty_available": 75,
         "incoming_qty": 0,
         "qty_low_stock_notify": 80,
         "active": True,
