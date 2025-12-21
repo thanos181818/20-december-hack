@@ -46,36 +46,38 @@ const Index = () => {
         />
       </Helmet>
 
-      {/* Fullscreen Video Intro */}
-      {!videoEnded && (
-        <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
-          <video
-            ref={videoRef}
-            src={introVideo}
-            className={`w-full h-full object-cover transition-opacity duration-500 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
-            muted
-            playsInline
-            onLoadedData={handleVideoLoaded}
-            onEnded={handleVideoEnd}
-          />
-          {/* Skip button (subtle, bottom right) */}
-          <button
-            onClick={handleVideoEnd}
-            className="absolute bottom-8 right-8 text-white/60 hover:text-white text-sm font-medium transition-colors"
-          >
-            Skip Intro →
-          </button>
-          {/* Loading indicator */}
-          {!videoLoaded && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
-            </div>
-          )}
-        </div>
-      )}
+      {/* Fullscreen Video Intro with smooth curtain reveal */}
+      <div 
+        className={`fixed inset-0 z-[100] bg-black flex items-center justify-center transition-all duration-[1500ms] ease-[cubic-bezier(0.76,0,0.24,1)] ${
+          videoEnded ? 'opacity-0 pointer-events-none scale-110' : 'opacity-100 scale-100'
+        }`}
+      >
+        <video
+          ref={videoRef}
+          src={introVideo}
+          className={`w-full h-full object-cover transition-opacity duration-700 ${videoLoaded ? 'opacity-100' : 'opacity-0'}`}
+          muted
+          playsInline
+          onLoadedData={handleVideoLoaded}
+          onEnded={handleVideoEnd}
+        />
+        {/* Skip button (subtle, bottom right) */}
+        <button
+          onClick={handleVideoEnd}
+          className="absolute bottom-8 right-8 text-white/60 hover:text-white text-sm font-medium transition-colors backdrop-blur-sm px-4 py-2 rounded-full border border-white/20"
+        >
+          Skip Intro →
+        </button>
+        {/* Loading indicator */}
+        {!videoLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
+      </div>
 
-      {/* Main Content (shown after video ends or is skipped) */}
-      <div className={`transition-opacity duration-700 ${videoEnded ? 'opacity-100' : 'opacity-0'}`}>
+      {/* Main Content */}
+      <div className={`transition-all duration-[1200ms] ease-out ${videoEnded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
         <Layout>
           <HeroSection />
           <CategorySection />

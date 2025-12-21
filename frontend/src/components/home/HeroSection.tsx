@@ -61,9 +61,45 @@ const HeroSection = () => {
         </div>
       </div>
 
-      {/* Decorative Element */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/3 h-full hidden lg:block">
-        <div className="absolute inset-0 bg-gradient-to-l from-brown-500/30 to-transparent" />
+      {/* Right Side - Elegant Visual */}
+      <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:block">
+        {/* Gradient overlay for blending */}
+        <div className="absolute inset-0 bg-gradient-to-r from-brown-700 via-brown-700/60 to-brown-600/30 z-10" />
+        
+        {/* Single Hero Image */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1200&h=1600&fit=crop" 
+            alt="Fashion collection"
+            className="w-full h-full object-cover object-center"
+          />
+        </div>
+        
+        {/* Decorative Elements */}
+        <div className="absolute inset-0 z-20 flex items-center justify-center">
+          {/* Circular frame accent */}
+          <div className="relative">
+            {/* Outer ring */}
+            <div className="w-72 h-72 rounded-full border-2 border-cream/20 absolute -top-36 -left-36" />
+            <div className="w-96 h-96 rounded-full border border-cream/10 absolute -top-48 -left-48" />
+            
+            {/* Feature badge */}
+            <div className="absolute right-12 top-1/4 bg-cream/95 backdrop-blur-sm rounded-2xl p-6 shadow-2xl transform hover:scale-105 transition-transform duration-500">
+              <div className="text-brown-800 font-display text-lg font-bold">New Arrivals</div>
+              <div className="text-brown-600 text-sm mt-1">Winter Collection</div>
+              <div className="mt-3 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-brown-600 text-xs">In Stock</span>
+              </div>
+            </div>
+            
+            {/* Discount tag */}
+            <div className="absolute right-24 bottom-1/4 bg-brown-800/90 backdrop-blur-sm text-cream rounded-xl px-5 py-3 shadow-xl">
+              <div className="text-2xl font-display font-bold">30% OFF</div>
+              <div className="text-cream/70 text-xs">First Purchase</div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
