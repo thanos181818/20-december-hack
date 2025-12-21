@@ -399,8 +399,8 @@ async def get_offers(session: AsyncSession = Depends(get_session)):
     Get all active payment terms/offers that have discounts.
     This is a public endpoint for displaying promos on the homepage.
     """
-    result = await session.exec(select(PaymentTerm))
-    terms = result.all()
+    result = await session.execute(select(PaymentTerm))
+    terms = result.scalars().all()
     
     offers = []
     for term in terms:
