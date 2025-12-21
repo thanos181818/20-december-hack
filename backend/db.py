@@ -13,13 +13,19 @@ load_dotenv(dotenv_path=env_path)
 # --- 2. Get Database URL ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# Railway provides postgres:// but asyncpg needs postgresql+asyncpg://
+if DATABASE_URL:
+    # Handle Railway's DATABASE_URL format
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
 # --- DEBUG PRINT ---
-# This will show up in your terminal logs. 
-# Check if it says 5433 or 5432.
 print(f"\n[DB DEBUG] Connecting to: {DATABASE_URL}\n")
 
 if not DATABASE_URL:
-    raise ValueError("❌ DATABASE_URL is missing! Check your backend/.env file.")
+    raise ValueError("❌ DATABASE_URL is missing! Check your backend/.env file or Railway environment variables.")
 
 # --- 3. Create Engine ---
 engine = create_async_engine(DATABASE_URL, echo=True, future=True)

@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 // Point to your running FastAPI backend
-export const API_URL = 'http://127.0.0.1:8000';
+// In production, set VITE_API_URL environment variable
+export const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export const api = axios.create({
   baseURL: API_URL,

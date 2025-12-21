@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db import init_db
@@ -10,14 +11,22 @@ from backend.stock_alerts import router as stock_alerts_router
 
 app = FastAPI(title="ApparelDesk API")
 
-# --- FIX: Add CORS Middleware ---
-# Origins that are allowed to make requests to this backend
+# --- CORS Middleware ---
+# Get frontend URL from environment variable for production
+frontend_url = os.getenv("FRONTEND_URL", "")
+
 origins = [
     "http://localhost:8080",  # Your Vite frontend
     "http://127.0.0.1:8080",
     "http://localhost:5173",  # Vite default
     "http://127.0.0.1:5173",
 ]
+
+# Add production frontend URL if set
+if frontend_url:
+    origins.append(frontend_url)
+    # Also add without trailing slash
+    origins.append(frontend_url.rstrip("/"))
 
 app.add_middleware(
     CORSMiddleware,
