@@ -1,6 +1,6 @@
 # backend/orders.py
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -19,9 +19,18 @@ class OrderItemSchema(BaseModel):
     product_id: int
     quantity: int
 
+class ShippingAddressSchema(BaseModel):
+    name: str = ""
+    address: str = ""
+    city: str = ""
+    state: str = ""
+    pincode: str = ""
+    phone: str = ""
+
 class OrderCreateSchema(BaseModel):
     items: List[OrderItemSchema]
     auto_invoice: bool = True
+    shipping_address: Optional[ShippingAddressSchema] = None
 
 # --- Router Setup ---
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -51,13 +60,21 @@ async def place_order(
         if not current_user.contact_id:
              raise HTTPException(status_code=400, detail="User has no linked Contact profile")
 
+        # Extract shipping address if provided
+        shipping = order_data.shipping_address
         new_order = SaleOrder(
             order_number=order_num,
             customer_id=current_user.contact_id,
             total_amount=0,
             tax_amount=0,
             discount_amount=0,
-            status="confirmed"
+            status="confirmed",
+            shipping_name=shipping.name if shipping else None,
+            shipping_address=shipping.address if shipping else None,
+            shipping_city=shipping.city if shipping else None,
+            shipping_state=shipping.state if shipping else None,
+            shipping_pincode=shipping.pincode if shipping else None,
+            shipping_phone=shipping.phone if shipping else None,
         )
         session.add(new_order)
         await session.flush()
@@ -104,7 +121,13 @@ async def place_order(
                 total_amount=total_amount,
                 tax_amount=0,
                 amount_paid=total_amount,  # Mark as paid since user already paid during checkout
-                status="paid"  # Set status to paid
+                status="paid",  # Set status to paid
+                shipping_name=shipping.name if shipping else None,
+                shipping_address=shipping.address if shipping else None,
+                shipping_city=shipping.city if shipping else None,
+                shipping_state=shipping.state if shipping else None,
+                shipping_pincode=shipping.pincode if shipping else None,
+                shipping_phone=shipping.phone if shipping else None,
             )
             session.add(invoice)
             await session.flush()  # Flush to get invoice.id
@@ -245,6 +268,29 @@ async def get_invoice_detail(
             "total": line.quantity * line.unit_price,
         })
     
+    # Build shipping address from invoice if available, otherwise from customer
+    shipping_address = ""
+    shipping_name = ""
+    shipping_phone = ""
+    
+    if invoice.shipping_address:
+        # Use shipping address from invoice
+        shipping_name = invoice.shipping_name or (customer.name if customer else "Customer")
+        shipping_parts = [invoice.shipping_address]
+        if invoice.shipping_city:
+            shipping_parts.append(invoice.shipping_city)
+        if invoice.shipping_state:
+            shipping_parts.append(invoice.shipping_state)
+        if invoice.shipping_pincode:
+            shipping_parts.append(invoice.shipping_pincode)
+        shipping_address = ", ".join(filter(None, shipping_parts))
+        shipping_phone = invoice.shipping_phone or (customer.phone if customer else "")
+    else:
+        # Fallback to customer address
+        shipping_name = customer.name if customer else "Customer"
+        shipping_address = customer.address if customer else ""
+        shipping_phone = customer.phone if customer else ""
+    
     return {
         "id": invoice.id,
         "invoice_number": invoice.invoice_number,
@@ -255,10 +301,10 @@ async def get_invoice_detail(
         "tax_amount": invoice.tax_amount,
         "amount_paid": invoice.amount_paid,
         "status": invoice.status,
-        "customer_name": customer.name if customer else "Customer",
+        "customer_name": shipping_name,
         "customer_email": customer.email if customer else "",
-        "customer_phone": customer.phone if customer else "",
-        "customer_address": customer.address if customer else "",
+        "customer_phone": shipping_phone,
+        "customer_address": shipping_address,
         "items": items,
     }
 
@@ -306,6 +352,29 @@ async def get_order_detail(
             "total": line.quantity * line.unit_price,
         })
     
+    # Build shipping address from order if available, otherwise from customer
+    shipping_address = ""
+    shipping_name = ""
+    shipping_phone = ""
+    
+    if order.shipping_address:
+        # Use shipping address from order
+        shipping_name = order.shipping_name or (customer.name if customer else "Customer")
+        shipping_parts = [order.shipping_address]
+        if order.shipping_city:
+            shipping_parts.append(order.shipping_city)
+        if order.shipping_state:
+            shipping_parts.append(order.shipping_state)
+        if order.shipping_pincode:
+            shipping_parts.append(order.shipping_pincode)
+        shipping_address = ", ".join(filter(None, shipping_parts))
+        shipping_phone = order.shipping_phone or (customer.phone if customer else "")
+    else:
+        # Fallback to customer address
+        shipping_name = customer.name if customer else "Customer"
+        shipping_address = customer.address if customer else ""
+        shipping_phone = customer.phone if customer else ""
+    
     return {
         "id": order.id,
         "order_number": order.order_number,
@@ -314,10 +383,10 @@ async def get_order_detail(
         "tax_amount": order.tax_amount,
         "discount_amount": order.discount_amount,
         "status": order.status,
-        "customer_name": customer.name if customer else "Customer",
+        "customer_name": shipping_name,
         "customer_email": customer.email if customer else "",
-        "customer_phone": customer.phone if customer else "",
-        "customer_address": customer.address if customer else "",
+        "customer_phone": shipping_phone,
+        "customer_address": shipping_address,
         "invoice_id": invoice.id if invoice else None,
         "items": items,
     }

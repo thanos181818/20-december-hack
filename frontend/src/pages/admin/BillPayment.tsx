@@ -97,9 +97,9 @@ const BillPayment = () => {
         <title>Bill Payment | Admin | ApparelDesk</title>
       </Helmet>
 
-      <div className="space-y-6 max-w-4xl">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -113,7 +113,7 @@ const BillPayment = () => {
               <p className="text-sm text-muted-foreground">Pay/25/0002</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant={status === 'draft' ? 'default' : 'outline'}
               size="sm"
@@ -139,7 +139,7 @@ const BillPayment = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button 
             onClick={handleConfirm}
             disabled={status !== 'draft'}
@@ -173,102 +173,102 @@ const BillPayment = () => {
           </Button>
         </div>
 
-        {/* Payment Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+        {/* Payment Form and Bill Summary - Side by Side on Large Screens */}
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Payment Form - Takes 2 columns */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Payment Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label>Payment Type</Label>
+                  <Input
+                    value="Send"
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div>
+                  <Label>Partner Type</Label>
+                  <Input
+                    value="Vendor"
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div>
+                  <Label>Amount</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                    disabled={status !== 'draft'}
+                    placeholder="Auto-filled from bill"
+                  />
+                </div>
+                <div>
+                  <Label>Date</Label>
+                  <Input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    disabled={status !== 'draft'}
+                    placeholder="Default: Today's date"
+                  />
+                </div>
+              </div>
+
               <div>
-                <Label>Payment Type</Label>
+                <Label>Partner</Label>
                 <Input
-                  value="Send"
+                  value={formData.partner}
                   disabled
                   className="bg-muted"
-                />
-              </div>
-              <div>
-                <Label>Partner Type</Label>
-                <Input
-                  value="Vendor"
-                  disabled
-                  className="bg-muted"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Partner</Label>
-              <Input
-                value={formData.partner}
-                disabled
-                className="bg-muted"
-                placeholder="Auto-filled from bill"
-              />
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label>Amount</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                  disabled={status !== 'draft'}
                   placeholder="Auto-filled from bill"
                 />
               </div>
+
               <div>
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                <Label>Note</Label>
+                <Textarea
+                  value={formData.note}
+                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
                   disabled={status !== 'draft'}
-                  placeholder="Default: Today's date"
+                  placeholder="Default: Invoice or bill number"
+                  rows={4}
                 />
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <div>
-              <Label>Note</Label>
-              <Textarea
-                value={formData.note}
-                onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                disabled={status !== 'draft'}
-                placeholder="Default: Invoice or bill number"
-                rows={3}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bill Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Bill Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Bill Number:</span>
-              <span className="font-medium">{bill.billNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Total Amount:</span>
-              <span className="font-medium">₹{bill.total.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Already Paid:</span>
-              <span className="font-medium text-green-600">₹{bill.paid.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between border-t pt-2">
-              <span className="font-semibold">Remaining:</span>
-              <span className="font-semibold text-red-600">₹{(bill.total - bill.paid).toLocaleString()}</span>
-            </div>
-          </CardContent>
-        </Card>
+          {/* Bill Summary - Takes 1 column */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Bill Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Bill Number:</span>
+                <span className="font-medium">{bill.billNumber}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Amount:</span>
+                <span className="font-medium">₹{bill.total.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Already Paid:</span>
+                <span className="font-medium text-green-600">₹{bill.paid.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between border-t pt-4">
+                <span className="font-semibold">Remaining:</span>
+                <span className="font-semibold text-red-600">₹{(bill.total - bill.paid).toLocaleString()}</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AdminLayout>
   );

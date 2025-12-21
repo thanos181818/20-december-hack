@@ -52,9 +52,9 @@ const VendorBillView = () => {
         <title>Bill {bill.billNumber} | Admin | ApparelDesk</title>
       </Helmet>
 
-      <div className="space-y-6 max-w-5xl">
+      <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
@@ -72,7 +72,7 @@ const VendorBillView = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={handlePrint} className="gap-2">
               <Printer className="h-4 w-4" />
               Print
@@ -91,7 +91,7 @@ const VendorBillView = () => {
         </div>
 
         {/* Bill Details */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>Bill Information</CardTitle>
@@ -191,8 +191,9 @@ const VendorBillView = () => {
         </Card>
 
         {/* Totals */}
-        <div className="flex justify-end">
-          <Card className="w-full md:w-96">
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div></div>
+          <Card className="w-full">
             <CardContent className="pt-6 space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal:</span>

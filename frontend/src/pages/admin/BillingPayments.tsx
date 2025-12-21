@@ -13,7 +13,6 @@ import {
   MoreHorizontal,
   Eye,
   Edit,
-  Printer,
   Send,
   CheckCircle,
   XCircle,
@@ -364,10 +363,6 @@ const BillingPayments = () => {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => window.print()}>
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               const customer = contacts.find(c => c.id === order.customerId);
                               toast.success(`Sales order sent to ${customer?.email || customer?.name || 'customer'}`);
@@ -477,10 +472,6 @@ const BillingPayments = () => {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => window.print()}>
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               const customer = contacts.find(c => c.id === invoice.customerId);
                               toast.success(`Invoice sent to ${customer?.email || customer?.name || 'customer'}`);
@@ -603,10 +594,6 @@ const BillingPayments = () => {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => window.print()}>
-                              <Printer className="h-4 w-4 mr-2" />
-                              Print
-                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
                               const vendor = contacts.find(c => c.id === order.vendorId);
                               toast.success(`Purchase order sent to ${vendor?.email || vendor?.name || 'vendor'}`);
@@ -717,10 +704,6 @@ const BillingPayments = () => {
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => window.print()}>
-                                <Printer className="h-4 w-4 mr-2" />
-                                Print
-                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
                                 const vendor = contacts.find(c => c.id === bill.vendorId);
                                 toast.success(`Bill sent to ${vendor?.email || vendor?.name || 'vendor'}`);

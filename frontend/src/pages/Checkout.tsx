@@ -51,14 +51,22 @@ const Checkout = () => {
 
     try {
       // 1. Prepare Payload for Backend
-      // The backend expects: { items: [{ product_id: int, quantity: int }], auto_invoice: bool }
+      // The backend expects: { items: [{ product_id: int, quantity: int }], auto_invoice: bool, shipping_address: {...} }
       const orderPayload = {
         auto_invoice: true,
         items: items.map(item => ({
           // Ensure we parse the ID as integer (frontend IDs might be strings)
           product_id: parseInt(item.id.split('-')[0]), 
           quantity: item.quantity
-        }))
+        })),
+        shipping_address: {
+          name: `${firstNameRef.current?.value || ''} ${lastNameRef.current?.value || ''}`.trim(),
+          address: addressRef.current?.value || '',
+          city: cityRef.current?.value || '',
+          state: stateRef.current?.value || '',
+          pincode: pincodeRef.current?.value || '',
+          phone: phoneRef.current?.value || '',
+        }
       };
 
       // 2. Call API (Transactional Endpoint)

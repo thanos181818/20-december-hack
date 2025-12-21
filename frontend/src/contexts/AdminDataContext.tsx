@@ -146,6 +146,7 @@ const STORAGE_KEYS = {
   users: 'admin_users',
   offers: 'admin_offers',
   coupons: 'admin_coupons',
+  productStates: 'admin_product_states',
 } as const;
 
 const ensureStorageVersion = () => {
@@ -393,24 +394,30 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [coupons]);
 
   // Helper to map backend product to admin product
-  const mapBackendProduct = (bp: BackendProduct): AdminProduct => ({
-    id: bp.id.toString(),
-    name: bp.name,
-    category: 'men', // Default, can be inferred from category field
-    type: 'shirts', // Default, can be inferred from category field
-    material: 'cotton', // Default
-    colors: ['Blue'], // Default
-    stock: bp.current_stock,
-    salesPrice: bp.price,
-    salesTax: 18,
-    purchasePrice: bp.price * 0.6,
-    purchaseTax: 12,
-    published: true,
-    status: 'confirmed',
-    description: bp.description || '',
-    images: bp.image_url ? [bp.image_url] : ['https://placehold.co/600x800/e2e8f0/1e293b?text=' + encodeURIComponent(bp.name)],
-    price: bp.price,
-  });
+  const mapBackendProduct = (bp: BackendProduct): AdminProduct => {
+    // Load saved product states from localStorage
+    const savedStates = loadFromStorage<Record<string, { status: ProductStatus; published: boolean }>>(STORAGE_KEYS.productStates, {});
+    const savedState = savedStates[bp.id.toString()];
+    
+    return {
+      id: bp.id.toString(),
+      name: bp.name,
+      category: 'men', // Default, can be inferred from category field
+      type: 'shirts', // Default, can be inferred from category field
+      material: 'cotton', // Default
+      colors: ['Blue'], // Default
+      stock: bp.current_stock,
+      salesPrice: bp.price,
+      salesTax: 18,
+      purchasePrice: bp.price * 0.6,
+      purchaseTax: 12,
+      published: savedState?.published ?? true,
+      status: savedState?.status ?? 'confirmed',
+      description: bp.description || '',
+      images: bp.image_url ? [bp.image_url] : ['https://placehold.co/600x800/e2e8f0/1e293b?text=' + encodeURIComponent(bp.name)],
+      price: bp.price,
+    };
+  };
 
   // Helper to map backend contact to admin contact
   const mapBackendContact = (bc: BackendContact): Contact => ({
@@ -634,23 +641,46 @@ export const AdminDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const updateProduct = useCallback(async (id: string, updates: Partial<AdminProduct>) => {
     try {
-      await productsApi.update(parseInt(id), {
+      // Only send to backend if there are backend-relevant updates
+      const backendUpdates = {
         name: updates.name,
         description: updates.description,
         price: updates.salesPrice,
         current_stock: updates.stock,
         category: updates.category,
         image_url: updates.images?.[0],
-      });
+      };
+      
+      // Check if any backend-relevant fields are being updated
+      const hasBackendUpdates = Object.values(backendUpdates).some(v => v !== undefined);
+      
+      if (hasBackendUpdates) {
+        await productsApi.update(parseInt(id), backendUpdates);
+      }
+      
+      // Update local state
       setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+      
       if (updates.name) {
         productNameMapRef.current.set(id, updates.name);
       }
+      
+      // Save status and published to localStorage if they're being updated
+      if (updates.status !== undefined || updates.published !== undefined) {
+        const savedStates = loadFromStorage<Record<string, { status: ProductStatus; published: boolean }>>(STORAGE_KEYS.productStates, {});
+        const currentProduct = products.find(p => p.id === id);
+        savedStates[id] = {
+          status: updates.status ?? currentProduct?.status ?? 'confirmed',
+          published: updates.published ?? currentProduct?.published ?? true,
+        };
+        saveToStorage(STORAGE_KEYS.productStates, savedStates);
+      }
+      
       toast.success('Product updated successfully');
     } catch (error: any) {
       toast.error('Failed to update product: ' + (error.response?.data?.detail || error.message));
     }
-  }, []);
+  }, [products]);
 
   const deleteProduct = useCallback(async (id: string) => {
     try {

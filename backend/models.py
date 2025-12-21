@@ -100,6 +100,13 @@ class SaleOrder(SQLModel, table=True):
     status: OrderStatus = Field(default=OrderStatus.DRAFT)
     notes: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Shipping address fields
+    shipping_name: Optional[str] = None
+    shipping_address: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_state: Optional[str] = None
+    shipping_pincode: Optional[str] = None
+    shipping_phone: Optional[str] = None
     
     customer: Contact = Relationship(back_populates="customer_orders")
     lines: List["SaleOrderLine"] = Relationship(back_populates="order", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
@@ -129,6 +136,13 @@ class Invoice(SQLModel, table=True):
     status: InvoiceStatus = Field(default=InvoiceStatus.DRAFT)
     notes: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    # Shipping address fields
+    shipping_name: Optional[str] = None
+    shipping_address: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_state: Optional[str] = None
+    shipping_pincode: Optional[str] = None
+    shipping_phone: Optional[str] = None
     
     sale_order: Optional[SaleOrder] = Relationship(back_populates="invoices")
     customer: Contact = Relationship(back_populates="customer_invoices")
