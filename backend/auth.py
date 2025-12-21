@@ -26,16 +26,33 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# --- Load Admin Credentials from JSON file ---
+# --- Load Admin Credentials from JSON file or Environment Variable ---
 def load_admin_credentials():
-    """Load admin credentials from admins.json file."""
+    """
+    Load admin credentials from:
+    1. ADMINS_JSON environment variable (for production/Render)
+    2. admins.json file (for local development)
+    """
+    # First try environment variable (for production)
+    admins_json_env = os.getenv("ADMINS_JSON")
+    if admins_json_env:
+        try:
+            data = json.loads(admins_json_env)
+            print("✅ Loaded admins from ADMINS_JSON environment variable")
+            return data.get("admins", [])
+        except json.JSONDecodeError:
+            print("⚠️ ADMINS_JSON environment variable is invalid JSON.")
+            return []
+    
+    # Fallback to file (for local development)
     admin_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "admins.json")
     try:
         with open(admin_file_path, "r") as f:
             data = json.load(f)
+            print("✅ Loaded admins from admins.json file")
             return data.get("admins", [])
     except FileNotFoundError:
-        print("⚠️ admins.json not found. No admins configured.")
+        print("⚠️ admins.json not found and ADMINS_JSON env not set. No admins configured.")
         return []
     except json.JSONDecodeError:
         print("⚠️ admins.json is invalid JSON.")
