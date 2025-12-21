@@ -227,5 +227,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Hugging Face](https://huggingface.co/) - AI models
 
 ---
+## Youtube Link
 
-<p align="center">Made with ❤️ for the fashion industry</p>
+- [Entire Implementation](https://youtu.be/l38BjBbPV4Q/)
