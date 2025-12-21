@@ -8,8 +8,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from backend.db import engine
-from backend.models import (
+from db import engine
+from models import (
     Product, ProductType, Contact, ContactType,
     SaleOrder, SaleOrderLine, OrderStatus,
     Invoice, InvoiceLine, InvoiceStatus,

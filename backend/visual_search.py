@@ -94,8 +94,8 @@ async def visual_search(
         query_embedding = get_image_embedding(pil_image)
         
         # Import here to avoid circular imports
-        from backend.db import get_session, engine
-        from backend.models import Product
+        from db import get_session, engine
+        from models import Product
         
         # Get all products from database
         async with AsyncSession(engine) as session:

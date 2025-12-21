@@ -1,13 +1,13 @@
 import os
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from backend.db import init_db
-from backend.auth import router as auth_router
-from backend.orders import router as orders_router
-from backend.admin_api import router as admin_router
-from backend.websocket_manager import manager
-from backend.visual_search import router as visual_search_router
-from backend.stock_alerts import router as stock_alerts_router
+from db import init_db
+from auth import router as auth_router
+from orders import router as orders_router
+from admin_api import router as admin_router
+from websocket_manager import manager
+from visual_search import router as visual_search_router
+from stock_alerts import router as stock_alerts_router
 
 app = FastAPI(title="ApparelDesk API")
 

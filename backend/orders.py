@@ -9,10 +9,10 @@ from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import select
 
 # Internal imports
-from backend.db import get_session
-from backend.models import Product, SaleOrder, SaleOrderLine, Invoice, InvoiceLine, User, PaymentTerm
-from backend.auth import get_current_user
-from backend.websocket_manager import manager
+from db import get_session
+from models import Product, SaleOrder, SaleOrderLine, Invoice, InvoiceLine, User, PaymentTerm
+from auth import get_current_user
+from websocket_manager import manager
 
 # --- Pydantic Schemas (Data Validation) ---
 class OrderItemSchema(BaseModel):
@@ -234,7 +234,7 @@ async def get_invoice_detail(
     session: AsyncSession = Depends(get_session)
 ):
     """Get a specific invoice by ID."""
-    from backend.models import Contact, InvoiceLine
+    from models import Contact, InvoiceLine
     
     invoice = await session.get(Invoice, invoice_id)
     
@@ -332,7 +332,7 @@ async def get_order_detail(
     lines = result.scalars().all()
     
     # Get customer info
-    from backend.models import Contact
+    from models import Contact
     customer = await session.get(Contact, order.customer_id)
     
     # Get associated invoice

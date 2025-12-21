@@ -159,8 +159,8 @@ async def send_low_stock_email(
 @router.get("/check", response_model=LowStockReport)
 async def check_low_stock(threshold: int = DEFAULT_LOW_STOCK_THRESHOLD):
     """Check for products with low stock (below threshold)"""
-    from backend.db import engine
-    from backend.models import Product
+    from db import engine
+    from models import Product
     
     async with AsyncSession(engine) as session:
         result = await session.execute(
@@ -192,8 +192,8 @@ async def send_low_stock_notification(
     background_tasks: BackgroundTasks
 ):
     """Check low stock and send email notification"""
-    from backend.db import engine
-    from backend.models import Product
+    from db import engine
+    from models import Product
     
     # Get receiver email
     receiver = request.receiver_email or RECEIVER_EMAIL

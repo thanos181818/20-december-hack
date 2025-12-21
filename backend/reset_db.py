@@ -9,9 +9,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlmodel import SQLModel
-from backend.db import engine
+from db import engine
 # Import all models to ensure they're registered with SQLModel metadata
-from backend.models import (
+from models import (
     User, Contact, Product, 
     SaleOrder, SaleOrderLine,
     Invoice, InvoiceLine,

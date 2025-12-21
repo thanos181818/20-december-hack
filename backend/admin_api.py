@@ -10,8 +10,8 @@ from sqlmodel import select, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
-from backend.db import get_session
-from backend.models import (
+from db import get_session
+from models import (
     User, Contact, ContactType, Product, ProductType,
     SaleOrder, SaleOrderLine, OrderStatus,
     Invoice, InvoiceLine, InvoiceStatus,
@@ -19,7 +19,7 @@ from backend.models import (
     VendorBill, VendorBillLine,
     Payment, PaymentStatus, PaymentTerm
 )
-from backend.auth import get_current_user
+from auth import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
