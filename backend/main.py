@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from db import init_db
 from auth import router as auth_router
@@ -8,6 +8,7 @@ from admin_api import router as admin_router
 from websocket_manager import manager
 from visual_search import router as visual_search_router
 from stock_alerts import router as stock_alerts_router
+from seed import seed_database
 
 app = FastAPI(title="ApparelDesk API")
 
@@ -46,6 +47,19 @@ app.include_router(orders_router)
 app.include_router(admin_router)
 app.include_router(visual_search_router)
 app.include_router(stock_alerts_router)
+
+# --- Seed Database Endpoint ---
+@app.post("/api/seed")
+async def trigger_seed():
+    """
+    Endpoint to seed the database with initial data.
+    Use this after deployment to populate the database.
+    """
+    try:
+        await seed_database()
+        return {"message": "Database seeded successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Seeding failed: {str(e)}")
 
 # --- WebSocket Endpoint for Admin ---
 @app.websocket("/ws/admin")
