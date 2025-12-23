@@ -38,8 +38,8 @@ async def seed_database():
                 "current_stock": 45,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg",
-                "images": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/assets/product-mens-shirt.jpg",
+                "images": "/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Elegant Silk Kurta",
@@ -48,8 +48,8 @@ async def seed_database():
                 "current_stock": 30,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg",
-                "images": "/src/assets/product-kurta.jpg"
+                "image_url": "/assets/product-kurta.jpg",
+                "images": "/assets/product-kurta.jpg"
             },
             {
                 "name": "Designer Women's Dress",
@@ -58,8 +58,8 @@ async def seed_database():
                 "current_stock": 25,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/woman-designer-1.1.jpeg",
-                "images": "/src/assets/woman-designer-1.1.jpeg,/src/assets/woman-designer-1.2.jpeg,/src/assets/woman-designer-1.3.jpeg"
+                "image_url": "/assets/woman-designer-1.1.jpeg",
+                "images": "/assets/woman-designer-1.1.jpeg,/assets/woman-designer-1.2.jpeg,/assets/woman-designer-1.3.jpeg"
             },
             {
                 "name": "Classic Leather Jacket",
@@ -68,8 +68,8 @@ async def seed_database():
                 "current_stock": 20,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg",
-                "images": "/src/assets/product-jacket.jpg"
+                "image_url": "/assets/product-jacket.jpg",
+                "images": "/assets/product-jacket.jpg"
             },
             {
                 "name": "Cotton Casual Shirt - Blue",
@@ -78,8 +78,8 @@ async def seed_database():
                 "current_stock": 60,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg",
-                "images": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/assets/product-mens-shirt.jpg",
+                "images": "/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Festive Kurta Set",
@@ -88,8 +88,8 @@ async def seed_database():
                 "current_stock": 35,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg",
-                "images": "/src/assets/product-kurta.jpg"
+                "image_url": "/assets/product-kurta.jpg",
+                "images": "/assets/product-kurta.jpg"
             },
             {
                 "name": "Summer Floral Dress",
@@ -98,8 +98,8 @@ async def seed_database():
                 "current_stock": 50,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/women-summer-1.1.jpeg",
-                "images": "/src/assets/women-summer-1.1.jpeg,/src/assets/women-summer-1.2.jpeg"
+                "image_url": "/assets/women-summer-1.1.jpeg",
+                "images": "/assets/women-summer-1.1.jpeg,/assets/women-summer-1.2.jpeg"
             },
             {
                 "name": "Denim Jacket - Classic Blue",
@@ -108,8 +108,8 @@ async def seed_database():
                 "current_stock": 40,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg",
-                "images": "/src/assets/product-jacket.jpg"
+                "image_url": "/assets/product-jacket.jpg",
+                "images": "/assets/product-jacket.jpg"
             },
             {
                 "name": "Linen Blend Shirt - White",
@@ -118,8 +118,8 @@ async def seed_database():
                 "current_stock": 55,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg",
-                "images": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/assets/product-mens-shirt.jpg",
+                "images": "/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Wedding Kurta - Gold",
@@ -128,8 +128,8 @@ async def seed_database():
                 "current_stock": 15,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg",
-                "images": "/src/assets/product-kurta.jpg"
+                "image_url": "/assets/product-kurta.jpg",
+                "images": "/assets/product-kurta.jpg"
             },
             {
                 "name": "Women's Denim Collection",
@@ -138,8 +138,8 @@ async def seed_database():
                 "current_stock": 40,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/women-denim-1.1.jpeg",
-                "images": "/src/assets/women-denim-1.1.jpeg,/src/assets/women-denim-1.2.jpeg,/src/assets/women-denim-1.3.jpeg"
+                "image_url": "/assets/women-denim-1.1.jpeg",
+                "images": "/assets/women-denim-1.1.jpeg,/assets/women-denim-1.2.jpeg,/assets/women-denim-1.3.jpeg"
             },
             {
                 "name": "Winter Wool Coat",
@@ -148,8 +148,8 @@ async def seed_database():
                 "current_stock": 18,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg",
-                "images": "/src/assets/product-jacket.jpg"
+                "image_url": "/assets/product-jacket.jpg",
+                "images": "/assets/product-jacket.jpg"
             },
             {
                 "name": "Casual Polo Shirt",
@@ -158,8 +158,8 @@ async def seed_database():
                 "current_stock": 70,
                 "category": "Men's Shirts",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-mens-shirt.jpg",
-                "images": "/src/assets/product-mens-shirt.jpg"
+                "image_url": "/assets/product-mens-shirt.jpg",
+                "images": "/assets/product-mens-shirt.jpg"
             },
             {
                 "name": "Party Wear Kurta",
@@ -168,8 +168,8 @@ async def seed_database():
                 "current_stock": 28,
                 "category": "Ethnic Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-kurta.jpg",
-                "images": "/src/assets/product-kurta.jpg"
+                "image_url": "/assets/product-kurta.jpg",
+                "images": "/assets/product-kurta.jpg"
             },
             {
                 "name": "Classic Women's Dress",
@@ -178,8 +178,8 @@ async def seed_database():
                 "current_stock": 28,
                 "category": "Women's Wear",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-womens-dress.jpg",
-                "images": "/src/assets/product-womens-dress.jpg"
+                "image_url": "/assets/product-womens-dress.jpg",
+                "images": "/assets/product-womens-dress.jpg"
             },
             {
                 "name": "Bomber Jacket",
@@ -188,8 +188,8 @@ async def seed_database():
                 "current_stock": 32,
                 "category": "Jackets & Coats",
                 "product_type": ProductType.STORABLE,
-                "image_url": "/src/assets/product-jacket.jpg",
-                "images": "/src/assets/product-jacket.jpg"
+                "image_url": "/assets/product-jacket.jpg",
+                "images": "/assets/product-jacket.jpg"
             }
         ]
         

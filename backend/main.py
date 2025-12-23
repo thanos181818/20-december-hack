@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from db import init_db
 from auth import router as auth_router
 from orders import router as orders_router
@@ -11,6 +13,12 @@ from stock_alerts import router as stock_alerts_router
 from seed import seed_database
 
 app = FastAPI(title="ApparelDesk API")
+
+# --- Serve Static Files (Product Images) ---
+# Mount the assets directory to serve images
+assets_path = Path(__file__).parent / "assets"
+if assets_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
 
 # --- CORS Middleware ---
 # Get frontend URL from environment variable for production
