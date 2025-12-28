@@ -11,6 +11,8 @@ from websocket_manager import manager
 from visual_search import router as visual_search_router
 from stock_alerts import router as stock_alerts_router
 from seed import seed_database
+from sqlmodel import SQLModel
+from db import engine
 
 app = FastAPI(title="ApparelDesk API")
 
@@ -68,6 +70,30 @@ async def trigger_seed():
         return {"message": "Database seeded successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Seeding failed: {str(e)}")
+
+# --- Reset and Seed Database Endpoint ---
+@app.post("/api/reset-and-seed")
+async def trigger_reset_and_seed():
+    """
+    Endpoint to reset the database (drop all tables, recreate them) and then seed with initial data.
+    Use this when you've made schema changes and need to reset everything.
+    WARNING: This will delete all existing data!
+    """
+    try:
+        # Drop all tables
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+        
+        # Recreate all tables
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
+        
+        # Seed the database
+        await seed_database()
+        
+        return {"message": "Database reset and seeded successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Reset and seed failed: {str(e)}")
 
 # --- WebSocket Endpoint for Admin ---
 @app.websocket("/ws/admin")
