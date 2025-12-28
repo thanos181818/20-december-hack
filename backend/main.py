@@ -19,8 +19,8 @@ app = FastAPI(title="ApparelDesk API")
 # --- Serve Static Files (Product Images) ---
 # Mount the assets directory to serve images
 assets_path = Path(__file__).parent / "assets"
-if assets_path.exists():
-    app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
+assets_path.mkdir(exist_ok=True)  # Ensure directory exists
+app.mount("/assets", StaticFiles(directory=str(assets_path)), name="assets")
 
 # --- CORS Middleware ---
 # Get frontend URL from environment variable for production
